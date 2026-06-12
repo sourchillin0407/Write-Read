@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Write-Read</title>
+  <!-- Pretendard 폰트 (한국어/영어) -->
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      --bg: #eef2c8;        /* 죽인 레몬 */
+      --text: #2c2c2c;      /* 소프트 블랙 */
+      --point: #6b7c3a;     /* 올리브 그린 (버튼) */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', 'Noto Sans', sans-serif;
+      line-height: 1.5;
+      letter-spacing: 0.04em;   /* 평소보다 넓은 자간 */
+      -webkit-font-smoothing: antialiased;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .greeting {
+      font-size: clamp(20px, 4.2vw, 30px);
+      font-weight: 500;
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(44, 44, 44, 0.35);
+      padding: 8px 4px;
+      font-family: inherit;
+      font-size: 16px;
+      letter-spacing: inherit;
+      color: var(--text);
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .field::placeholder { color: rgba(44, 44, 44, 0.4); }
+    .field:focus { border-bottom-color: var(--text); }
+
+    .enter {
+      margin-top: 12px;
+      background: var(--point);
+      color: #f4f6e0;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 36px;
+      font-family: inherit;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .enter:hover { opacity: 0.85; }
+
+    .note {
+      margin-top: 18px;
+      font-size: 12px;
+      color: rgba(44, 44, 44, 0.45);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <p class="greeting">Write&amp;Read</p>
+
+  <form id="entry">
+    <input class="field" type="text" name="nickname" placeholder="이름 혹은 별명" autocomplete="off" />
+    <input class="field" type="email" name="email" placeholder="답장 알림용 이메일 주소" autocomplete="off" />
+    <button class="enter" type="submit">시작하기</button>
+    <p class="note" id="note"></p>
+  </form>
+
+  <script>
+    // 이미 들어온 적이 있으면 — 다시 묻지 않고 바로 들여보냅니다 (자동 로그인)
+    if (localStorage.getItem('wr_nickname') && localStorage.getItem('wr_email')) {
+      window.location.replace('question.html');
+    }
+
+    // 아직 진짜 로그인은 아니에요 — 이름만 기억해두고 질문 화면으로 넘어갑니다.
+    document.getElementById('entry').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = new FormData(e.target);
+      var nick = (data.get('nickname') || '').trim();
+      var mail = (data.get('email') || '').trim();
+      var note = document.getElementById('note');
+      if (!nick || !mail) {
+        note.textContent = '빈칸을 모두 채워주세요.';
+        return;
+      }
+      localStorage.setItem('wr_nickname', nick);
+      localStorage.setItem('wr_email', mail);
+      window.location.href = 'question.html';
+    });
+  </script>
+</body>
+</html>

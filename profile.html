@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Write-Read — 프로필</title>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      --bg: #eef2c8;
+      --text: #2c2c2c;
+      --point: #6b7c3a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', 'Noto Sans', sans-serif;
+      line-height: 1.5;
+      letter-spacing: 0.04em;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .name-line { font-size: clamp(18px, 3.6vw, 24px); text-align: center; }
+    .mail-line { font-size: 14px; text-align: center; margin-top: 20px; color: rgba(44, 44, 44, 0.55); }
+    .lang-line { font-size: 14px; text-align: center; margin-top: 8px; color: rgba(44, 44, 44, 0.55); }
+
+    select.field {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* 수정 모드 — 랜딩과 같은 밑줄 입력칸 */
+    #edit-form {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      width: 100%;
+      max-width: 320px;
+    }
+    #edit-form.on { display: flex; }
+
+    .field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(44, 44, 44, 0.35);
+      padding: 8px 4px;
+      font-family: inherit;
+      font-size: 16px;
+      letter-spacing: inherit;
+      color: var(--text);
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .field::placeholder { color: rgba(44, 44, 44, 0.4); }
+    .field:focus { border-bottom-color: var(--text); }
+
+    .save {
+      background: var(--point);
+      color: #f4f6e0;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 36px;
+      font-family: inherit;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .save:hover { opacity: 0.85; }
+
+    .actions { display: flex; gap: 32px; margin-top: 56px; }
+
+    .leave, .edit {
+      margin-top: 0;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: inherit;
+      color: rgba(44, 44, 44, 0.45);
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s ease, border-color 0.2s ease;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: inherit;
+    }
+    .leave:hover, .edit:hover { color: var(--text); border-bottom-color: var(--text); }
+
+    .dock {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 40px;
+    }
+    .dock a { color: var(--point); opacity: 0.8; transition: opacity 0.2s ease; display: flex; }
+    .dock a:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+  <p class="name-line" id="name-line"></p>
+  <p class="mail-line" id="mail-line"></p>
+  <p class="lang-line" id="lang-line"></p>
+
+  <!-- 수정 모드: 평소엔 숨겨져 있어요 -->
+  <form id="edit-form">
+    <input class="field" type="text" id="edit-nick" placeholder="이름 혹은 별명" autocomplete="off" />
+    <input class="field" type="email" id="edit-mail" placeholder="답장 알림용 이메일 주소" autocomplete="off" />
+    <select class="field" id="edit-lang" aria-label="편지를 받을 언어"></select>
+    <button class="save" type="submit">저장하기</button>
+  </form>
+
+  <div class="actions" id="actions">
+    <button class="edit" id="edit">수정하기</button>
+    <button class="leave" id="leave">이 이름을 두고 나가기</button>
+  </div>
+
+  <nav class="dock">
+    <a href="question.html" aria-label="오늘의 질문">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4 L12 20 M4 12 L20 12"/>
+      </svg>
+    </a>
+    <a href="inbox.html" aria-label="받은 편지함">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5.5" width="18" height="13" rx="1.5"/>
+        <path d="M3.5 6.5 L12 13 L20.5 6.5"/>
+      </svg>
+    </a>
+    <a href="unsent.html" aria-label="보내지 않은 편지">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 3 a2.828 2.828 0 1 1 4 4 L7.5 20.5 L2 22 l1.5 -5.5 L17 3 z"/>
+      </svg>
+    </a>
+  </nav>
+
+  <script>
+    // 편지를 받을 언어 — 나중에 번역 API의 목표 언어가 됩니다
+    var LANGS = {
+      ko: '한국어', en: 'English', ja: '日本語', zh: '中文(简体)', zht: '中文(繁體)',
+      es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano',
+      ru: 'Русский', ar: 'العربية', hi: 'हिन्दी', bn: 'বাংলা', id: 'Bahasa Indonesia',
+      vi: 'Tiếng Việt', th: 'ไทย', tr: 'Türkçe', pl: 'Polski', nl: 'Nederlands',
+      sv: 'Svenska', uk: 'Українська', el: 'Ελληνικά', cs: 'Čeština', ro: 'Română',
+      hu: 'Magyar', fi: 'Suomi', da: 'Dansk', no: 'Norsk', he: 'עברית',
+      fa: 'فارسی', ms: 'Bahasa Melayu', fil: 'Filipino', sw: 'Kiswahili'
+    };
+
+    var langSelect = document.getElementById('edit-lang');
+    Object.keys(LANGS).forEach(function (code) {
+      var opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = LANGS[code];
+      langSelect.appendChild(opt);
+    });
+
+    function render() {
+      var nick = localStorage.getItem('wr_nickname') || '이름 없는 사람';
+      var mail = localStorage.getItem('wr_email') || '';
+      var lang = localStorage.getItem('wr_lang') || 'ko';
+      document.getElementById('name-line').textContent = '당신은 지금, ' + nick + '(이)라는 이름으로 머물고 있어요.';
+      document.getElementById('mail-line').textContent = mail ? '답장이 오면, ' + mail + '(으)로 알려 드립니다. 그 외에는 전혀 사용되지 않아요.' : '';
+      document.getElementById('lang-line').textContent = '도착하는 편지는 ' + (LANGS[lang] || '한국어') + '로 번역되어 닿아요.';
+    }
+    render();
+
+    function setEditMode(on) {
+      document.getElementById('name-line').style.display = on ? 'none' : '';
+      document.getElementById('mail-line').style.display = on ? 'none' : '';
+      document.getElementById('lang-line').style.display = on ? 'none' : '';
+      document.getElementById('actions').style.display = on ? 'none' : '';
+      document.getElementById('edit-form').classList.toggle('on', on);
+    }
+
+    // 수정하기 — 세 줄이 입력칸으로 바뀝니다
+    document.getElementById('edit').addEventListener('click', function () {
+      document.getElementById('edit-nick').value = localStorage.getItem('wr_nickname') || '';
+      document.getElementById('edit-mail').value = localStorage.getItem('wr_email') || '';
+      langSelect.value = localStorage.getItem('wr_lang') || 'ko';
+      setEditMode(true);
+      document.getElementById('edit-nick').focus();
+    });
+
+    // 저장하기 — 이름, 이메일, 언어를 기억하고 원래 화면으로
+    document.getElementById('edit-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var nick = document.getElementById('edit-nick').value.trim();
+      var mail = document.getElementById('edit-mail').value.trim();
+      if (!nick || !mail) return;
+      localStorage.setItem('wr_nickname', nick);
+      localStorage.setItem('wr_email', mail);
+      localStorage.setItem('wr_lang', langSelect.value);
+      setEditMode(false);
+      render();
+    });
+
+    // 로그아웃 — 기억해둔 이름을 지우고 처음으로
+    document.getElementById('leave').addEventListener('click', function () {
+      localStorage.removeItem('wr_nickname');
+      localStorage.removeItem('wr_email');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>
