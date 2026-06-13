@@ -16,7 +16,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
+    html, body { min-height: 100%; }
 
     body {
       background: var(--bg);
@@ -28,58 +28,84 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       min-height: 100vh;
-      padding: 24px 24px 110px;
+      padding: 72px 24px 120px;
     }
 
     .view { display: none; width: 100%; max-width: 640px; }
     .view.on { display: flex; flex-direction: column; align-items: center; animation: fade 0.6s ease; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-    .lead { font-size: clamp(16px, 3vw, 20px); text-align: center; margin-bottom: 40px; }
+    .lead { font-size: clamp(16px, 3vw, 20px); text-align: center; margin-bottom: 36px; }
     .sub { font-size: 14px; text-align: center; margin-top: 20px; color: rgba(44, 44, 44, 0.55); }
 
-    /* 편지지 카드 */
-    .letters { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-
-    .letter {
-      background: var(--paper);
+    /* 대화 목록 — 사람별 카드 */
+    .threads { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+    .thread-card {
+      background: var(--paper-warm);
       border: none;
       border-radius: 4px;
-      padding: 28px 28px 22px;
+      padding: 20px 22px;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
       font-family: inherit;
       letter-spacing: inherit;
       color: var(--text);
-      text-align: left;
       box-shadow: 0 2px 10px rgba(44, 44, 44, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .letter:nth-child(odd)  { transform: rotate(-0.6deg); }
-    .letter:nth-child(even) { transform: rotate(0.5deg); }
+    .thread-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(44, 44, 44, 0.12); }
+    .thread-card .who { font-size: 16px; font-weight: 500; }
+    .thread-card .q { font-size: 12px; color: rgba(44, 44, 44, 0.5); }
+    .thread-card .seed {
+      font-size: 13px; color: rgba(44, 44, 44, 0.65);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .thread-card .turn { font-size: 12px; color: var(--point); margin-top: 2px; }
 
-    .letter .original { font-size: 16px; line-height: 1.5; white-space: pre-line; }
-    .letter .translated { font-size: 13px; line-height: 1.5; margin-top: 12px; color: rgba(44, 44, 44, 0.6); white-space: pre-line; }
-    .letter .from { font-size: 12px; margin-top: 16px; color: rgba(44, 44, 44, 0.45); }
-
-    /* 답장 토글 */
-    .reply-toggle {
-      margin-top: 16px;
-      background: none;
-      border: none;
-      border-top: none; border-left: none; border-right: none;
-      font-family: inherit;
-      font-size: 13px;
-      letter-spacing: inherit;
-      color: rgba(44, 44, 44, 0.45);
-      cursor: pointer;
+    /* 대화 상세 */
+    .back {
+      align-self: flex-start;
+      background: none; border: none; cursor: pointer;
+      font-family: inherit; letter-spacing: inherit; font-size: 13px;
+      color: rgba(44, 44, 44, 0.5);
+      margin-bottom: 24px; padding: 0 0 1px;
       border-bottom: 1px solid transparent;
       transition: color 0.2s ease, border-color 0.2s ease;
     }
-    .reply-toggle:hover { color: var(--text); border-bottom-color: var(--text); }
+    .back::before { content: '← '; }
+    .back:hover { color: var(--text); border-bottom-color: var(--text); }
 
-    .reply-form { display: none; flex-direction: column; gap: 12px; margin-top: 18px; }
-    .reply-form.on { display: flex; animation: fade 0.4s ease; }
+    .thread-head {
+      width: 100%;
+      border-left: 2px solid rgba(107, 124, 58, 0.4);
+      padding-left: 16px;
+      margin-bottom: 28px;
+    }
+    .thread-head .who { font-size: 18px; font-weight: 500; }
+    .thread-head .origin { font-size: 11px; color: rgba(44, 44, 44, 0.4); margin-top: 10px; }
+    .thread-head .q { font-size: 13px; color: rgba(44, 44, 44, 0.6); margin-top: 4px; }
+    .thread-head .seed { font-size: 14px; color: var(--text); margin-top: 6px; white-space: pre-line; }
 
+    /* 그 사람이 나에게 보낸 편지들 */
+    .letters { display: flex; flex-direction: column; gap: 18px; width: 100%; }
+    .rcv {
+      background: var(--paper-cool);
+      border-radius: 4px;
+      padding: 22px 24px 18px;
+      box-shadow: 0 2px 10px rgba(44, 44, 44, 0.08);
+    }
+    .rcv:nth-child(odd)  { transform: rotate(-0.4deg); }
+    .rcv:nth-child(even) { transform: rotate(0.4deg); }
+    .rcv .body { font-size: 15px; line-height: 1.5; white-space: pre-line; }
+    .rcv .date { font-size: 12px; margin-top: 14px; color: rgba(44, 44, 44, 0.45); }
+
+    /* 답장 (내 차례일 때만) */
+    .reply-form { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 28px; }
     .reply-text {
       width: 100%;
       background: transparent;
@@ -98,7 +124,6 @@
     }
     .reply-text::placeholder { color: rgba(44, 44, 44, 0.4); }
     .reply-text:focus { border-bottom-color: var(--text); }
-
     .reply-send {
       align-self: flex-start;
       background: var(--point);
@@ -113,8 +138,7 @@
       transition: opacity 0.2s ease;
     }
     .reply-send:hover { opacity: 0.85; }
-
-    .reply-note { font-size: 12px; color: rgba(44, 44, 44, 0.45); }
+    .reply-note { font-size: 12px; color: rgba(44, 44, 44, 0.5); margin-top: 16px; text-align: center; }
 
     /* 하단 독 */
     .dock {
@@ -131,38 +155,56 @@
 </head>
 <body>
 
-  <!-- ① 편지 목록 (아직 도착한 편지가 없을 때) -->
+  <!-- ① 아직 받은 편지가 없을 때 -->
   <section class="view on" id="view-empty">
-    <p class="lead">아직, 도착한 편지가 없어요.</p>
-    <p class="sub">누군가에게 답이 닿으면, 여기로 편지가 와요.</p>
+    <p class="lead" data-i18n="inbox.empty"></p>
+    <p class="sub" data-i18n="inbox.emptySub"></p>
   </section>
 
-  <!-- ② 편지 목록 (도착한 편지가 있을 때) -->
+  <!-- ② 대화 목록 -->
   <section class="view" id="view-list">
-    <p class="lead">도착한 편지들이에요.</p>
-    <div class="letters" id="letters"></div>
+    <p class="lead" data-i18n="inbox.lead"></p>
+    <div class="threads" id="threads"></div>
+  </section>
+
+  <!-- ③ 대화 상세 (그 사람이 보낸 편지들 + 내 차례면 답장 1회) -->
+  <section class="view" id="view-thread">
+    <button class="back" id="back" type="button" data-i18n="inbox.back"></button>
+    <div class="thread-head">
+      <p class="who" id="t-who"></p>
+      <p class="origin" id="t-origin"></p>
+      <p class="q" id="t-q"></p>
+      <p class="seed" id="t-seed"></p>
+    </div>
+    <div class="letters" id="t-letters"></div>
+    <form class="reply-form" id="t-reply">
+      <textarea class="reply-text" id="t-reply-text" rows="2" maxlength="1000"
+        data-i18n-ph="inbox.replyHint" placeholder="답장을 적어보세요" autocomplete="off" spellcheck="false"></textarea>
+      <button class="reply-send" type="submit" id="t-send" data-i18n="inbox.replySend"></button>
+    </form>
+    <p class="reply-note" id="t-note"></p>
   </section>
 
   <!-- 하단 독: 오늘의 질문 / 보내지 않은 편지 / 지도 / 프로필 -->
   <nav class="dock">
-    <a href="question.html" aria-label="오늘의 질문">
+    <a href="question.html" data-i18n-aria="nav.question" aria-label="오늘의 질문">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 4 L12 20 M4 12 L20 12"/>
       </svg>
     </a>
-    <a href="unsent.html" aria-label="보내지 않은 편지">
+    <a href="unsent.html" data-i18n-aria="nav.unsent" aria-label="보내지 않은 편지">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 3 a2.828 2.828 0 1 1 4 4 L7.5 20.5 L2 22 l1.5 -5.5 L17 3 z"/>
       </svg>
     </a>
-    <a href="map.html" aria-label="지도">
+    <a href="map.html" data-i18n-aria="nav.map" aria-label="지도">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
         <path d="M3 12 L21 12"/>
         <path d="M12 3 C16.5 3 16.5 21 12 21 C7.5 21 7.5 3 12 3 Z"/>
       </svg>
     </a>
-    <a href="profile.html" aria-label="프로필">
+    <a href="profile.html" data-i18n-aria="nav.profile" aria-label="프로필">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="8.5" r="3.5"/>
         <path d="M5 19.5 C6.5 15.5 9 14.5 12 14.5 C15 14.5 17.5 15.5 19 19.5"/>
@@ -172,89 +214,160 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
+  <script src="i18n.js"></script>
+  <script src="questions.js"></script>
   <script>
+    var currentThread = null;
+
     function show(id) {
       document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on'); });
       document.getElementById(id).classList.add('on');
     }
 
-    // 로그인 확인 후, 내 받은 편지함만 불러와요 (출입증 자동 첨부)
+    function fmtDate(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+    }
+
+    // 로그인 확인 후 내 대화 목록을 불러와요 (출입증 자동 첨부)
     requireLogin().then(function (token) {
       if (!token) return;
       loadInbox();
     });
 
+    // 언어가 바뀌면 목록을 새 언어로 다시 그려요
+    document.addEventListener('i18n:changed', function () { loadInbox(); });
+
     function loadInbox() {
-    apiFetch('/api/inbox')
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        var messages = (data && data.messages) || [];
-        if (!messages.length) { show('view-empty'); return; }
-
-        var box = document.getElementById('letters');
-        box.innerHTML = '';
-        messages.forEach(function (m, idx) {
-          var card = document.createElement('div');
-          card.className = 'letter';
-          card.style.setProperty('--paper', idx % 2 === 0 ? 'var(--paper-warm)' : 'var(--paper-cool)');
-          card.innerHTML =
-            '<p class="original"></p>' +
-            '<p class="from"></p>' +
-            '<button class="reply-toggle" type="button">답장하기</button>' +
-            '<form class="reply-form">' +
-              '<textarea class="reply-text" rows="2" maxlength="1000" placeholder="답장을 적어보세요" autocomplete="off" spellcheck="false"></textarea>' +
-              '<button class="reply-send" type="submit">보내기</button>' +
-              '<p class="reply-note"></p>' +
-            '</form>';
-
-          card.querySelector('.original').textContent = m.body;
-          card.querySelector('.from').textContent = m.from + '님이 보낸 ' + (m.kind === 'reply' ? '답장' : '편지');
-
-          var toggle = card.querySelector('.reply-toggle');
-          var form = card.querySelector('.reply-form');
-          toggle.addEventListener('click', function () {
-            form.classList.toggle('on');
-            if (form.classList.contains('on')) form.querySelector('.reply-text').focus();
-          });
-
-          form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            var textarea = form.querySelector('.reply-text');
-            var note = form.querySelector('.reply-note');
-            var sendBtn = form.querySelector('.reply-send');
-            var text = textarea.value.trim();
-            if (!text) return;
-
-            sendBtn.disabled = true;
-            note.textContent = '보내는 중…';
-
-            apiFetch('/api/send-reply', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ letterId: m.letterId, body: text })
-            }).then(function (res) {
-              sendBtn.disabled = false;
-              if (res.ok) {
-                note.textContent = '답장을 보냈어요.';
-                textarea.value = '';
-                textarea.disabled = true;
-                sendBtn.disabled = true;
-              } else {
-                note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
-              }
-            }).catch(function () {
-              sendBtn.disabled = false;
-              note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
-            });
-          });
-
-          box.appendChild(card);
-        });
-
-        show('view-list');
-      })
-      .catch(function () { show('view-empty'); });
+      apiFetch('/api/inbox')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var threads = (data && data.threads) || [];
+          if (!threads.length) { show('view-empty'); return; }
+          renderList(threads);
+          show('view-list');
+        })
+        .catch(function () { show('view-empty'); });
     }
+
+    // 대화 목록 — 사람(대화)별 카드
+    function renderList(threads) {
+      var box = document.getElementById('threads');
+      box.innerHTML = '';
+      threads.forEach(function (th) {
+        var card = document.createElement('button');
+        card.className = 'thread-card';
+        card.type = 'button';
+
+        var who = document.createElement('p');
+        who.className = 'who';
+        who.textContent = th.other;
+        card.appendChild(who);
+
+        if (th.questionIndex != null) {
+          var q = document.createElement('p');
+          q.className = 'q';
+          q.textContent = questionByIndex(th.questionIndex);
+          card.appendChild(q);
+        }
+        if (th.seedAnswer) {
+          var s = document.createElement('p');
+          s.className = 'seed';
+          s.textContent = th.seedAnswer; // 상대가 적은 내용 — textContent로만 안전하게
+          card.appendChild(s);
+        }
+        if (th.canReply) {
+          var turn = document.createElement('p');
+          turn.className = 'turn';
+          turn.textContent = t('inbox.yourTurn');
+          card.appendChild(turn);
+        }
+
+        card.addEventListener('click', function () { openThread(th); });
+        box.appendChild(card);
+      });
+    }
+
+    // 대화 상세 — 그 사람이 나에게 보낸 편지들 + (내 차례면) 답장 1회
+    function openThread(th) {
+      currentThread = th;
+      document.getElementById('t-who').textContent = th.other;
+      document.getElementById('t-origin').textContent = th.seedAnswer ? t('inbox.origin') : '';
+      document.getElementById('t-q').textContent = (th.questionIndex != null) ? questionByIndex(th.questionIndex) : '';
+      document.getElementById('t-seed').textContent = th.seedAnswer || '';
+
+      var letters = document.getElementById('t-letters');
+      letters.innerHTML = '';
+      th.incoming.forEach(function (m) {
+        var card = document.createElement('div');
+        card.className = 'rcv';
+        var b = document.createElement('p');
+        b.className = 'body';
+        b.textContent = m.body; // 상대가 적은 내용 — textContent로만
+        card.appendChild(b);
+        var d = document.createElement('p');
+        d.className = 'date';
+        d.textContent = fmtDate(m.createdAt);
+        card.appendChild(d);
+        letters.appendChild(card);
+      });
+
+      document.getElementById('t-reply-text').value = '';
+      setReplyState(th.canReply);
+      show('view-thread');
+    }
+
+    // 답장칸 표시 여부 — 내 차례(canReply)일 때만 보이고, 아니면 "기다리는 중" 안내
+    function setReplyState(can) {
+      document.getElementById('t-reply').style.display = can ? 'flex' : 'none';
+      document.getElementById('t-note').textContent = can ? '' : t('inbox.waiting');
+      document.getElementById('t-send').disabled = false;
+    }
+
+    // 답장 입력칸 높이 자동 조절
+    var replyText = document.getElementById('t-reply-text');
+    replyText.addEventListener('input', function () {
+      replyText.style.height = 'auto';
+      replyText.style.height = replyText.scrollHeight + 'px';
+    });
+
+    // 답장 보내기 (1회) — 보내고 나면 상대 차례가 돼요
+    document.getElementById('t-reply').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!currentThread) return;
+      var ta = document.getElementById('t-reply-text');
+      var note = document.getElementById('t-note');
+      var btn = document.getElementById('t-send');
+      var text = ta.value.trim();
+      if (!text) return;
+
+      btn.disabled = true;
+      note.textContent = t('inbox.sending');
+
+      apiFetch('/api/send-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ letterId: currentThread.threadId, body: text })
+      }).then(function (res) {
+        if (res.ok || res.status === 409) {
+          // 보냈거나, 이미 내 차례가 끝난 경우 — 둘 다 "기다리는 중"으로
+          ta.value = '';
+          currentThread.canReply = false;
+          setReplyState(false);
+        } else {
+          btn.disabled = false;
+          note.textContent = t('inbox.sendFail');
+        }
+      }).catch(function () {
+        btn.disabled = false;
+        note.textContent = t('inbox.connFail');
+      });
+    });
+
+    // 뒤로 — 목록을 다시 불러와요 (차례 상태도 갱신)
+    document.getElementById('back').addEventListener('click', function () { loadInbox(); });
   </script>
 </body>
 </html>

@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 원래 편지를 보낸 사람(=답장 수신자)과, 그 편지의 수신자(=답장할 자격자) 확인
+    // 이 편지(대화)의 두 사람 확인
     var letterRes = await fetch(
       SUPABASE_URL + '/rest/v1/letters?id=eq.' + letterId + '&select=from_user_id,to_user_id',
       { headers: sbHeaders() }
@@ -43,9 +43,24 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 내가 받은 편지에만 답장할 수 있어요 (남의 편지에 끼어들기 차단)
-    if (letter.to_user_id !== sender.id) {
-      res.status(403).json({ error: 'not your letter' });
+    // 이 대화의 두 사람 중 하나여야 답장할 수 있어요 (제3자 끼어들기 차단).
+    // 누가 시작했든, 두 사람은 계속 번갈아 이어서 쓸 수 있어요.
+    if (letter.from_user_id !== sender.id && letter.to_user_id !== sender.id) {
+      res.status(403).json({ error: 'not your conversation' });
+      return;
+    }
+    // 받는 사람은 "이 대화의 상대방"
+    var recipientId = (letter.from_user_id === sender.id) ? letter.to_user_id : letter.from_user_id;
+
+    // 펜팔 규칙: 가장 최근에 온 편지에만 1회 답장. 내가 마지막으로 보낸 상태면 못 보내요(상대 차례).
+    var lastReplyRes = await fetch(
+      SUPABASE_URL + '/rest/v1/replies?letter_id=eq.' + letterId + '&order=created_at.desc&limit=1&select=from_user_id',
+      { headers: sbHeaders() }
+    );
+    var lastReplyRows = await lastReplyRes.json();
+    var lastSender = lastReplyRows.length ? lastReplyRows[0].from_user_id : letter.from_user_id;
+    if (lastSender === sender.id) {
+      res.status(409).json({ error: 'wait for their reply' });
       return;
     }
 
@@ -55,7 +70,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         letter_id: letterId,
         from_user_id: sender.id,
-        to_user_id: letter.from_user_id,
+        to_user_id: recipientId,
         body: text
       })
     });
@@ -66,7 +81,7 @@ export default async function handler(req, res) {
     }
 
     // 받는 사람에게 "새 편지가 도착했어요" 이메일 (best-effort)
-    var recipients = await getUsersByIds([letter.from_user_id]);
+    var recipients = await getUsersByIds([recipientId]);
     if (recipients[0]) {
       await sendEmail(
         recipients[0].email,

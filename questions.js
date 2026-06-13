@@ -65,6 +65,70 @@ var QUESTIONS = [
   "요즘 자주 찾아보는 키워드나 주제가 있다면."
 ];
 
+// 같은 질문의 영어 번역 (UI 언어가 영어(또는 한국어 외)일 때 보여줘요)
+var QUESTIONS_EN = [
+  "What is your hometown like to you?",
+  "Who do you think of most these days?",
+  "If there's a place you eat at often these days, share its name and neighborhood.",
+  "Which season describes you best?",
+  "What did you hear most often growing up?",
+  "Share the title and artist of a song you've had on repeat lately.",
+  "How do you spend your time alone?",
+  "If you could say one thing to your present self, what would it be?",
+  "Is there a film you'd recommend to someone?",
+  "What's the thing you've kept the longest?",
+  "What small thing makes you smile?",
+  "Is there a book you've read recently that you'd recommend?",
+  "What sound usually begins your day?",
+  "Is there a day you'd like to return to?",
+  "What's your favorite walk or spot in your neighborhood?",
+  "How does the word “home” feel to you?",
+  "Do you remember the first thing you did all on your own?",
+  "Is there an app or tool you use often these days?",
+  "What's your favorite time of day, and why?",
+  "When you picture your childhood room, what do you see?",
+  "Is there a place you'd like to travel to again? Where?",
+  "What do you often put off?",
+  "What do you see outside your window right now?",
+  "Is there a dish you often cook or a food you love?",
+  "What does “resting” look like for you?",
+  "If a kind of weather resembled you, what would it be?",
+  "Is there something you've bought recently that you love?",
+  "How close are you to the adult you dreamed of becoming as a child?",
+  "What sound comforts you?",
+  "If you'd recommend a café, what would you order there?",
+  "What's on your desk right now?",
+  "Is there a smell you never want to forget?",
+  "Is there a channel or content you enjoy these days?",
+  "When are you most honest?",
+  "What does feeling “safe” look like to you?",
+  "What do you usually do to relieve stress?",
+  "What wears you out most these days?",
+  "When was the calmest moment of your day?",
+  "Is there something useful you've learned recently?",
+  "How does “tenderness” come to you?",
+  "Is there a dream you have often?",
+  "Is there a scent or perfume you love?",
+  "If you've ever traveled alone, what do you remember of it?",
+  "When did time seem to stand still for you?",
+  "Is there an exercise or routine you keep?",
+  "Is there something you most want to hear right now?",
+  "What's your most comfortable posture?",
+  "What gift were you especially happy to receive?",
+  "What color is the sky you often look up at?",
+  "Is there a line from a letter you've received that stays with you?",
+  "Is there an exhibition, performance, or video you've seen recently?",
+  "What moment feels most like “being yourself”?",
+  "Is there something you want to thank someone for today?",
+  "Is there a seasonal food you love?",
+  "What scene comes to mind with the words “empty space”?",
+  "Is there a shared silence that stays with you?",
+  "Is there something you do just before sleep?",
+  "From whom do you most want to hear “it's okay”?",
+  "If you wrote today in one sentence, what would it be?",
+  "Is there a keyword or topic you look up often these days?"
+];
+
 var QUESTIONS_START = '2026-06-13'; // 이 날이 0번 질문
 
 function todayQuestionIndex() {
@@ -76,8 +140,17 @@ function todayQuestionIndex() {
   return ((days % QUESTIONS.length) + QUESTIONS.length) % QUESTIONS.length;
 }
 
+// UI 언어에 맞는 오늘의 질문. 한국어면 한국어, 그 외(영어 등)면 영어로.
+// uiLang()은 i18n.js에서 와요. (없으면 한국어로)
 function todayQuestion() {
-  return QUESTIONS[todayQuestionIndex()];
+  return questionByIndex(todayQuestionIndex());
+}
+
+// 특정 번호의 질문을 현재 언어로 (받은 편지함에서 "어떤 질문에 답한 사람"을 보여줄 때 사용)
+function questionByIndex(idx) {
+  var lang = (typeof uiLang === 'function') ? uiLang() : 'ko';
+  var arr = (lang === 'ko') ? QUESTIONS : QUESTIONS_EN;
+  return (arr[idx] != null) ? arr[idx] : '';
 }
 
 // KST 기준 오늘 날짜 (YYYY-MM-DD)

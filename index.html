@@ -110,6 +110,15 @@
       text-align: center;
       min-height: 1em;
     }
+
+    /* 첫 화면에만 — 가입 후 언어를 바꿀 수 있다는 작은 안내 (한·영) */
+    .lang-note {
+      margin-top: 28px;
+      font-size: 11px;
+      color: rgba(44, 44, 44, 0.4);
+      text-align: center;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -118,15 +127,17 @@
   <form id="entry">
     <input class="field signup-only" type="text" name="nickname" placeholder="이름 혹은 별명" autocomplete="off" />
     <input class="field" type="email" name="email" placeholder="이메일 주소" autocomplete="username" />
-    <input class="field" type="password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" />
-    <button class="enter" type="submit" id="submit-btn">시작하기</button>
-    <button class="toggle" type="button" id="toggle">이미 계정이 있어요 — 로그인</button>
+    <input class="field" type="password" name="password" placeholder="비밀번호" autocomplete="current-password" />
+    <button class="enter" type="submit" id="submit-btn"></button>
+    <button class="toggle" type="button" id="toggle"></button>
     <p class="note" id="note"></p>
+    <p class="lang-note" id="lang-note"></p>
   </form>
 
   <!-- 먼저 supabase-js, 그 다음 우리 공용 헬퍼(auth.js) 순서로 불러와요 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
+  <script src="i18n.js"></script>
   <script>
     var note = document.getElementById('note');
     var button = document.getElementById('submit-btn');
@@ -141,9 +152,19 @@
     function setLoginMode(on) {
       mode = on ? 'login' : 'signup';
       document.body.classList.toggle('login-mode', on);
-      button.textContent = on ? '들어가기' : '시작하기';
-      toggle.textContent = on ? '처음이신가요 — 가입하기' : '이미 계정이 있어요 — 로그인';
+      button.textContent = on ? tBoth('auth.login') : tBoth('auth.signup');
+      toggle.textContent = on ? tBoth('auth.toSignup') : tBoth('auth.toLogin');
     }
+
+    // 첫 화면은 한·영을 함께 보여줘요 (방문자의 언어를 아직 모르니까)
+    function initBilingual() {
+      document.querySelector('input[name="nickname"]').placeholder = tBoth('profile.nickPlaceholder');
+      document.querySelector('input[name="email"]').placeholder = tBoth('auth.email');
+      document.querySelector('input[name="password"]').placeholder = tBoth('auth.password');
+      document.getElementById('lang-note').textContent = tBoth('auth.langNote');
+      setLoginMode(false); // 기본은 가입 모드 — 버튼/토글 글자도 한·영으로 채워져요
+    }
+    initBilingual();
 
     // 가입 ↔ 로그인 전환
     toggle.addEventListener('click', function () {
@@ -155,7 +176,7 @@
     function showAlreadyRegistered(mail) {
       setLoginMode(true);
       document.querySelector('input[name="email"]').value = mail;
-      note.textContent = '이미 가입된 이메일이에요. 로그인해주세요.';
+      note.textContent = tBoth('auth.already');
     }
 
     document.getElementById('entry').addEventListener('submit', function (e) {
@@ -165,18 +186,18 @@
       var mail = (data.get('email') || '').trim();
       var pw = (data.get('password') || '');
 
-      if (mode === 'signup' && !nick) { note.textContent = '이름 혹은 별명을 적어주세요.'; return; }
-      if (!mail || !pw) { note.textContent = '이메일과 비밀번호를 모두 채워주세요.'; return; }
-      if (pw.length < 6) { note.textContent = '비밀번호는 6자 이상으로 적어주세요.'; return; }
+      if (mode === 'signup' && !nick) { note.textContent = tBoth('auth.needNick'); return; }
+      if (!mail || !pw) { note.textContent = tBoth('auth.needBoth'); return; }
+      if (pw.length < 6) { note.textContent = tBoth('auth.pwShort'); return; }
 
       button.disabled = true;
-      note.textContent = mode === 'signup' ? '계정을 만드는 중…' : '들어가는 중…';
+      note.textContent = mode === 'signup' ? tBoth('auth.creating') : tBoth('auth.entering');
 
       if (mode === 'signup') {
         sb.auth.signUp({
           email: mail,
           password: pw,
-          options: { data: { nickname: nick, lang: 'ko' } }
+          options: { data: { nickname: nick, lang: uiLang() } }
         }).then(function (res) {
           button.disabled = false;
           if (res.error) {
@@ -184,7 +205,7 @@
             if (/already registered|already exists|User already/i.test(m)) {
               showAlreadyRegistered(mail);
             } else {
-              note.textContent = '가입에 실패했어요. 잠시 후 다시 시도해주세요.';
+              note.textContent = tBoth('auth.signupFail');
             }
             return;
           }
@@ -201,13 +222,13 @@
           window.location.href = 'question.html';
         }).catch(function () {
           button.disabled = false;
-          note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+          note.textContent = tBoth('auth.connFail');
         });
       } else {
         sb.auth.signInWithPassword({ email: mail, password: pw }).then(function (res) {
           button.disabled = false;
           if (res.error) {
-            note.textContent = '이메일 또는 비밀번호를 확인해주세요.';
+            note.textContent = tBoth('auth.loginFail');
             return;
           }
           var meta = (res.data && res.data.user && res.data.user.user_metadata) || {};
@@ -215,7 +236,7 @@
           window.location.href = 'question.html';
         }).catch(function () {
           button.disabled = false;
-          note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+          note.textContent = tBoth('auth.connFail');
         });
       }
     });

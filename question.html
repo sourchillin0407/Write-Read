@@ -175,15 +175,15 @@
     <h1 class="question" id="question-text"></h1>
     <textarea class="answer" id="answer" rows="1" autofocus maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
-    <p class="hint">다 적었다면, 엔터.</p>
+    <p class="hint" id="answer-hint"></p>
   </section>
 
   <!-- ② 결 고르기 -->
   <section class="view" id="view-tone">
-    <p class="ask">이 답을, 누구에게 보낼까요.</p>
+    <p class="ask" data-i18n="q.tone.ask"></p>
     <div class="tones">
-      <button class="tone" data-tone="same">나와 같은 결의 사람에게</button>
-      <button class="tone" data-tone="diff">나와 다른 결의 사람에게</button>
+      <button class="tone" data-tone="same" data-i18n="q.tone.same"></button>
+      <button class="tone" data-tone="diff" data-i18n="q.tone.diff"></button>
     </div>
   </section>
 
@@ -195,49 +195,49 @@
 
   <!-- ④ 첫 편지 쓰기 -->
   <section class="view" id="view-write">
-    <p class="lead">이 사람에게, 첫 문장을 건네보세요.</p>
+    <p class="lead" data-i18n="q.write.lead"></p>
     <div class="letters" id="chosen"></div>
     <textarea class="answer letter-body" id="letter" rows="3" maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
-    <button class="home" id="send-letter">띄워 보내기</button>
+    <button class="home" id="send-letter" data-i18n="q.write.send"></button>
     <p class="hint" id="letter-note"></p>
   </section>
 
   <!-- 사람이 아직 안 모였을 때 -->
   <section class="view" id="view-wait">
-    <p class="sent-line">아직, 사람이 모이는 중이에요.</p>
-    <p class="sent-sub">당신의 답은 잘 놓아두었어요.<br/>세 사람이 모이면, 이메일로 알려드릴게요.</p>
-    <button class="home" id="go-home-wait">처음으로</button>
+    <p class="sent-line" data-i18n="q.wait.line"></p>
+    <p class="sent-sub" data-i18n="q.wait.sub"></p>
+    <button class="home" id="go-home-wait" data-i18n="q.home"></button>
   </section>
 
   <!-- ⑤ 편지가 떠났어요 -->
   <section class="view" id="view-sent">
-    <p class="sent-line">편지가 떠났어요.<br/>이제 당신이 할 일은, 기다리는 일뿐이에요.</p>
-    <p class="sent-sub">오늘의 질문은 자정에 닫혀요. 당신의 답은 그때까지 누군가에게 흘러갑니다.</p>
-    <button class="home" id="go-home">처음으로</button>
+    <p class="sent-line" data-i18n="q.sent.line"></p>
+    <p class="sent-sub" data-i18n="q.sent.sub"></p>
+    <button class="home" id="go-home" data-i18n="q.home"></button>
   </section>
 
   <!-- 하단 독: 받은 편지함 / 보내지 않은 편지 / 지도 / 프로필 -->
   <nav class="dock">
-    <a href="inbox.html" aria-label="받은 편지함">
+    <a href="inbox.html" data-i18n-aria="nav.inbox" aria-label="받은 편지함">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="5.5" width="18" height="13" rx="1.5"/>
         <path d="M3.5 6.5 L12 13 L20.5 6.5"/>
       </svg>
     </a>
-    <a href="unsent.html" aria-label="보내지 않은 편지">
+    <a href="unsent.html" data-i18n-aria="nav.unsent" aria-label="보내지 않은 편지">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 3 a2.828 2.828 0 1 1 4 4 L7.5 20.5 L2 22 l1.5 -5.5 L17 3 z"/>
       </svg>
     </a>
-    <a href="map.html" aria-label="지도">
+    <a href="map.html" data-i18n-aria="nav.map" aria-label="지도">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
         <path d="M3 12 L21 12"/>
         <path d="M12 3 C16.5 3 16.5 21 12 21 C7.5 21 7.5 3 12 3 Z"/>
       </svg>
     </a>
-    <a href="profile.html" aria-label="프로필">
+    <a href="profile.html" data-i18n-aria="nav.profile" aria-label="프로필">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="8.5" r="3.5"/>
         <path d="M5 19.5 C6.5 15.5 9 14.5 12 14.5 C15 14.5 17.5 15.5 19 19.5"/>
@@ -247,17 +247,34 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
+  <script src="i18n.js"></script>
   <script src="questions.js"></script>
   <script>
     var QUESTION_INDEX = todayQuestionIndex();
     var ANSWER_DATE = todayDateString();
-    document.getElementById('question-text').textContent = todayQuestion();
 
     var chosenAnswerId = null;
 
     // 오늘 이미 답했는지 여부 — 답했으면 새로 답하지 않고 "수정"만 해요
     var alreadyAnswered = false;
     var existingTone = null;
+
+    // 질문 본문과 입력칸 아래 안내문을 현재 언어로 칠해요 (언어가 바뀌면 다시 호출)
+    function paintQuestion() {
+      document.getElementById('question-text').textContent = todayQuestion();
+    }
+    function paintAnswerHint() {
+      document.getElementById('answer-hint').innerHTML =
+        alreadyAnswered ? t('q.hint.answered') : t('q.hint');
+    }
+    paintQuestion();
+    paintAnswerHint();
+
+    // 언어가 바뀌면(다른 기기에서 처음 로그인 등) JS로 만든 글자도 다시 칠해요
+    document.addEventListener('i18n:changed', function () {
+      paintQuestion();
+      paintAnswerHint();
+    });
 
     // 로그인 안 돼 있으면 첫 화면으로 돌려보내고, 로그인돼 있으면 오늘 쓴 답을 불러와요
     requireLogin().then(function (token) {
@@ -278,8 +295,7 @@
           answer.value = a.body;
           answer.style.height = 'auto';
           answer.style.height = answer.scrollHeight + 'px';
-          document.querySelector('#view-question .hint').textContent =
-            '오늘은 이미 답했어요. 고치고 싶으면 내용을 바꾸고 엔터.';
+          paintAnswerHint();
         })
         .catch(function () {});
     }
@@ -327,14 +343,12 @@
 
     // 오늘 답을 고쳐 저장 (결은 처음 고른 그대로, 재매칭 없음)
     function saveEdit() {
-      var hint = document.querySelector('#view-question .hint');
-      hint.textContent = '저장하는 중…';
+      var hint = document.getElementById('answer-hint');
+      hint.textContent = t('q.saving');
       submitAnswer(existingTone, answerText, true).then(function (data) {
-        hint.textContent = (data && data.status === 'saved')
-          ? '고쳐서 저장했어요.'
-          : '저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+        hint.textContent = (data && data.status === 'saved') ? t('q.saved') : t('q.saveFail');
       }).catch(function () {
-        hint.textContent = '저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+        hint.textContent = t('q.saveFail');
       });
     }
 
@@ -351,9 +365,7 @@
 
           var pool = data.candidates || [];
           var lead = document.getElementById('lead');
-          lead.textContent = tone === 'same'
-            ? '당신과 비슷한 온도로 답한 세 사람입니다.'
-            : '당신과 전혀 다른 곳에서 답한 세 사람입니다.';
+          lead.textContent = tone === 'same' ? t('q.lead.same') : t('q.lead.diff');
 
           var paper = tone === 'same' ? 'var(--paper-warm)' : 'var(--paper-cool)';
           var box = document.getElementById('letters');
@@ -419,7 +431,7 @@
       if (!letter.value.trim() || !chosenAnswerId) return;
 
       btn.disabled = true;
-      note.textContent = '보내는 중…';
+      note.textContent = t('q.sending');
 
       apiFetch('/api/send-letter', {
         method: 'POST',
@@ -433,11 +445,11 @@
         if (res.ok) {
           show('view-sent');
         } else {
-          note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
+          note.textContent = t('q.sendFail');
         }
       }).catch(function () {
         btn.disabled = false;
-        note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+        note.textContent = t('q.connFail');
       });
     });
 

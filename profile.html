@@ -123,34 +123,34 @@
 
   <!-- 수정 모드: 평소엔 숨겨져 있어요 -->
   <form id="edit-form">
-    <input class="field" type="text" id="edit-nick" placeholder="이름 혹은 별명" autocomplete="off" />
+    <input class="field" type="text" id="edit-nick" data-i18n-ph="profile.nickPlaceholder" placeholder="이름 혹은 별명" autocomplete="off" />
     <select class="field" id="edit-lang" aria-label="편지를 받을 언어"></select>
-    <button class="save" type="submit">저장하기</button>
+    <button class="save" type="submit" data-i18n="profile.save"></button>
   </form>
 
   <div class="actions" id="actions">
-    <button class="edit" id="edit">수정하기</button>
-    <button class="leave" id="leave">이 이름을 두고 나가기</button>
+    <button class="edit" id="edit" data-i18n="profile.edit"></button>
+    <button class="leave" id="leave" data-i18n="profile.leave"></button>
   </div>
 
   <nav class="dock">
-    <a href="question.html" aria-label="오늘의 질문">
+    <a href="question.html" data-i18n-aria="nav.question" aria-label="오늘의 질문">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 4 L12 20 M4 12 L20 12"/>
       </svg>
     </a>
-    <a href="inbox.html" aria-label="받은 편지함">
+    <a href="inbox.html" data-i18n-aria="nav.inbox" aria-label="받은 편지함">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="5.5" width="18" height="13" rx="1.5"/>
         <path d="M3.5 6.5 L12 13 L20.5 6.5"/>
       </svg>
     </a>
-    <a href="unsent.html" aria-label="보내지 않은 편지">
+    <a href="unsent.html" data-i18n-aria="nav.unsent" aria-label="보내지 않은 편지">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 3 a2.828 2.828 0 1 1 4 4 L7.5 20.5 L2 22 l1.5 -5.5 L17 3 z"/>
       </svg>
     </a>
-    <a href="map.html" aria-label="지도">
+    <a href="map.html" data-i18n-aria="nav.map" aria-label="지도">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
         <path d="M3 12 L21 12"/>
@@ -161,6 +161,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
+  <script src="i18n.js"></script>
   <script>
     // 편지를 받을 언어 — 나중에 번역 API의 목표 언어가 됩니다
     var LANGS = {
@@ -187,12 +188,12 @@
     function metaLang() { return (me && me.user_metadata && me.user_metadata.lang) || localStorage.getItem('wr_lang') || 'ko'; }
 
     function render() {
-      var nick = metaNick() || '이름 없는 사람';
+      var nick = metaNick() || t('profile.noName');
       var mail = (me && me.email) || '';
       var lang = metaLang();
-      document.getElementById('name-line').textContent = '당신은 지금, ' + nick + '(이)라는 이름으로 머물고 있어요.';
-      document.getElementById('mail-line').textContent = mail ? '답장이 오면, ' + mail + '(으)로 알려 드립니다. 그 외에는 전혀 사용되지 않아요.' : '';
-      document.getElementById('lang-line').textContent = '도착하는 편지는 ' + (LANGS[lang] || '한국어') + '로 번역되어 닿아요.';
+      document.getElementById('name-line').textContent = t('profile.name', { nick: nick });
+      document.getElementById('mail-line').textContent = mail ? t('profile.mail', { mail: mail }) : '';
+      document.getElementById('lang-line').textContent = t('profile.lang', { lang: (LANGS[lang] || 'English') });
     }
 
     // 로그인 확인 + 내 계정 정보 불러오기
@@ -203,6 +204,9 @@
         render();
       });
     });
+
+    // 언어가 바뀌면(다른 기기에서 처음 로그인 등) 동적 문장도 다시 그려요
+    document.addEventListener('i18n:changed', render);
 
     function setEditMode(on) {
       document.getElementById('name-line').style.display = on ? 'none' : '';
@@ -240,7 +244,8 @@
       localStorage.setItem('wr_lang', lang);
       if (me) { me.user_metadata = me.user_metadata || {}; me.user_metadata.nickname = nick; me.user_metadata.lang = lang; }
       setEditMode(false);
-      render();
+      applyI18n(); // 고정 글자(버튼·독)를 새 언어로
+      render();    // 동적 문장(이름·메일·언어 안내)을 새 언어로
     });
 
     // 로그아웃 — 세션을 끊고 처음으로
