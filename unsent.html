@@ -254,24 +254,13 @@
       maxZoom: 18
     }).addTo(map);
 
-    // 다른 사람들의 공개 편지 (지금은 가짜 — 분위기용)
-    var OTHERS = [
-      { text: '여기 벤치에서 너에게 쓰려던 말을, 끝내 부치지 못했어.', spot: [48.8566, 2.3522] },
-      { text: 'いつか一緒に見たかった海。', spot: [35.0116, 135.7681] },
-      { text: 'Te escribí esto el día que te fuiste. Nunca lo enviaré.', spot: [-34.6037, -58.3816] }
-    ];
+    // 다른 사람들의 공개 편지는 아직 연결되지 않았어요.
+    // Supabase가 붙으면, 전세계의 공개 편지가 여기에 함께 표시됩니다.
 
     var markers = [];
     function drawMarkers() {
       markers.forEach(function (m) { map.removeLayer(m); });
       markers = [];
-      OTHERS.forEach(function (o) {
-        var m = L.circleMarker(o.spot, {
-          radius: 7, color: '#6b7c3a', weight: 1.5,
-          fillColor: '#6b7c3a', fillOpacity: 0.55
-        }).addTo(map).bindPopup(escapeHtml(o.text));
-        markers.push(m);
-      });
       letters.forEach(function (l) {
         if (l.public && l.spot) {
           var m = L.circleMarker(l.spot, {

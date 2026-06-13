@@ -238,20 +238,11 @@
   </nav>
 
   <script>
-    // ── 지금은 프로토타입: 후보 세 사람은 가짜 데이터예요.
-    //    나중에 이 자리에 Supabase + 임베딩 매칭이 들어옵니다.
-    var MOCK = {
-      same: [
-        { original: '돌아갈 수 없는 곳이요. 그래서 자꾸 뒤돌아보게 되는 곳.', translated: null, from: 'haru · 한국어' },
-        { original: 'ただただ途方に暮れる場所。', translated: '그저, 어찌할 바를 모르게 되는 곳.', from: 'yuki · 日本語' },
-        { original: 'A smell more than a place. Rice cooking, rain on dust.', translated: '장소라기보다 냄새예요. 밥 짓는 냄새, 흙 위에 떨어지는 비.', from: 'mira · English' }
-      ],
-      diff: [
-        { original: '매주 일요일에 돌아가는 곳이요. 엄마가 김치를 싸줘요.', translated: null, from: 'dana · 한국어' },
-        { original: 'Le seul endroit où je dors vraiment bien.', translated: '내가 정말로 푹 잘 수 있는 유일한 곳.', from: 'léo · Français' },
-        { original: '고향이라는 말을 들으면 그냥 우리 집 강아지 생각밖에 안 나요.', translated: null, from: 'sol · 한국어' }
-      ]
-    };
+    // ── 아직 실제 매칭은 연결되지 않았어요.
+    //    여기서 Supabase + 임베딩으로 진짜 후보를 찾아오게 됩니다.
+    function fetchCandidates(tone) {
+      return [];
+    }
 
     function show(id) {
       document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on', 'fade'); });
@@ -279,8 +270,8 @@
       btn.addEventListener('click', function () {
         var tone = btn.dataset.tone;
 
-        // 후보가 세 사람 미만이면 — 기다림 화면으로 (지금은 가짜 데이터라 늘 3명이에요)
-        var pool = MOCK[tone] || [];
+        // 후보가 세 사람 미만이면 — 기다림 화면으로
+        var pool = fetchCandidates(tone);
         if (pool.length < 3) { show('view-wait'); return; }
 
         var lead = document.getElementById('lead');
@@ -291,7 +282,7 @@
         var paper = tone === 'same' ? 'var(--paper-warm)' : 'var(--paper-cool)';
         var box = document.getElementById('letters');
         box.innerHTML = '';
-        MOCK[tone].forEach(function (c) {
+        pool.forEach(function (c) {
           var b = document.createElement('button');
           b.className = 'letter';
           b.style.setProperty('--paper', paper);

@@ -103,25 +103,54 @@
   </form>
 
   <script>
+    var SUPABASE_URL = 'https://kkjcbazvgrxqzgfbzbcs.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtramNiYXp2Z3J4cXpnZmJ6YmNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzgyNTUsImV4cCI6MjA5Njg1NDI1NX0.C7cvDWeiYM4zCibQz7NK7zKJMZ59NLY7k4JYBfRPJIU';
+
     // 이미 들어온 적이 있으면 — 다시 묻지 않고 바로 들여보냅니다 (자동 로그인)
     if (localStorage.getItem('wr_nickname') && localStorage.getItem('wr_email')) {
       window.location.replace('question.html');
     }
 
-    // 아직 진짜 로그인은 아니에요 — 이름만 기억해두고 질문 화면으로 넘어갑니다.
+    // 가입 — 이메일은 데이터베이스에서 중복 여부를 확인합니다.
     document.getElementById('entry').addEventListener('submit', function (e) {
       e.preventDefault();
       var data = new FormData(e.target);
       var nick = (data.get('nickname') || '').trim();
       var mail = (data.get('email') || '').trim();
       var note = document.getElementById('note');
+      var button = e.target.querySelector('.enter');
       if (!nick || !mail) {
         note.textContent = '빈칸을 모두 채워주세요.';
         return;
       }
-      localStorage.setItem('wr_nickname', nick);
-      localStorage.setItem('wr_email', mail);
-      window.location.href = 'question.html';
+
+      note.textContent = '확인하는 중…';
+      button.disabled = true;
+
+      fetch(SUPABASE_URL + '/rest/v1/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ nickname: nick, email: mail, lang: 'ko' })
+      }).then(function (res) {
+        button.disabled = false;
+        if (res.ok) {
+          localStorage.setItem('wr_nickname', nick);
+          localStorage.setItem('wr_email', mail);
+          window.location.href = 'question.html';
+        } else if (res.status === 409) {
+          note.textContent = '이미 사용 중인 이메일이에요.';
+        } else {
+          note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
+        }
+      }).catch(function () {
+        button.disabled = false;
+        note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+      });
     });
   </script>
 </body>

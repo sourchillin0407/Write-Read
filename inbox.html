@@ -65,41 +65,6 @@
     .letter .translated { font-size: 13px; line-height: 1.5; margin-top: 12px; color: rgba(44, 44, 44, 0.6); white-space: pre-line; }
     .letter .from { font-size: 12px; margin-top: 16px; color: rgba(44, 44, 44, 0.45); }
 
-    /* 답장 쓰기 */
-    .reply {
-      width: 100%;
-      margin-top: 36px;
-      background: transparent;
-      border: none;
-      resize: none;
-      overflow: hidden;
-      font-family: inherit;
-      font-size: 16px;
-      line-height: 1.5;
-      letter-spacing: inherit;
-      color: var(--text);
-      caret-color: var(--text);
-      outline: none;
-      min-height: 4.5em;
-    }
-
-    .send {
-      margin-top: 32px;
-      background: var(--point);
-      color: #f4f6e0;
-      border: none;
-      border-radius: 999px;
-      padding: 12px 36px;
-      font-family: inherit;
-      font-size: 15px;
-      letter-spacing: 0.06em;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-    }
-    .send:hover { opacity: 0.85; }
-
-    .sent-line { font-size: clamp(18px, 3.6vw, 24px); text-align: center; }
-
     /* 하단 독 */
     .dock {
       position: fixed;
@@ -115,38 +80,10 @@
 </head>
 <body>
 
-  <!-- ① 편지 목록 (지금은 가짜 편지 한 통) -->
+  <!-- ① 편지 목록 (아직 도착한 편지가 없을 때) -->
   <section class="view on" id="view-list">
-    <p class="lead">편지 한 통이 도착해 있어요.</p>
-    <div class="letters">
-      <button class="letter" id="open-letter">
-        <p class="original">J'ai lu votre réponse, et je n'ai pas pu passer mon chemin.</p>
-        <p class="from">léo · Français · 같은 결</p>
-      </button>
-    </div>
-  </section>
-
-  <!-- ② 편지 읽기 + 답장 -->
-  <section class="view" id="view-read">
-    <div class="letters">
-      <div class="letter">
-        <p class="original">J'ai lu votre réponse, et je n'ai pas pu passer mon chemin.
-Moi aussi, je crois que certains endroits n'existent plus que dans la mémoire.
-On n'y retourne pas — on les réécrit, chaque fois qu'on s'en souvient.</p>
-        <p class="translated">당신의 답을 읽고, 그냥 지나칠 수가 없었어요.
-저도 어떤 장소들은 이제 기억 속에만 존재한다고 믿어요.
-우리는 그곳에 돌아가는 게 아니라 — 떠올릴 때마다, 그곳을 다시 쓰는 거예요.</p>
-        <p class="from">léo · Français · 같은 결</p>
-      </div>
-    </div>
-    <textarea class="reply" id="reply" rows="3" placeholder="" autocomplete="off" spellcheck="false"></textarea>
-    <button class="send" id="send-reply">답장 보내기</button>
-  </section>
-
-  <!-- ③ 답장 완료 -->
-  <section class="view" id="view-sent">
-    <p class="sent-line">답장이 떠났어요.</p>
-    <p class="sub">léo에게 이메일로 알려드릴 거예요.<br/>(아직은 시늉이에요 — 진짜 전송은 곧 연결합니다.)</p>
+    <p class="lead">아직, 도착한 편지가 없어요.</p>
+    <p class="sub">누군가에게 답이 닿으면, 여기로 편지가 와요.</p>
   </section>
 
   <!-- 하단 독: 오늘의 질문 / 보내지 않은 편지 / 프로필 -->
@@ -170,30 +107,8 @@ On n'y retourne pas — on les réécrit, chaque fois qu'on s'en souvient.</p>
   </nav>
 
   <script>
-    function show(id) {
-      document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on'); });
-      document.getElementById(id).classList.add('on');
-    }
-
-    // ① 편지 열기
-    document.getElementById('open-letter').addEventListener('click', function () {
-      show('view-read');
-      document.getElementById('reply').focus();
-    });
-
-    // ② 답장 칸도 쓰는 만큼 늘어나도록
-    var reply = document.getElementById('reply');
-    reply.addEventListener('input', function () {
-      reply.style.height = 'auto';
-      reply.style.height = reply.scrollHeight + 'px';
-    });
-
-    // ③ 답장 보내기 — 지금은 흉내만, 나중에 Supabase + 이메일 알림이 붙어요
-    document.getElementById('send-reply').addEventListener('click', function () {
-      if (!reply.value.trim()) return;
-      localStorage.setItem('wr_reply', reply.value.trim());
-      show('view-sent');
-    });
+    // 아직 받은 편지함은 실제 데이터와 연결되지 않았어요.
+    // Supabase가 붙으면, 도착한 편지를 여기서 읽고 답장할 수 있게 됩니다.
   </script>
 </body>
 </html>
