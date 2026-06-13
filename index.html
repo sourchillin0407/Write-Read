@@ -138,21 +138,25 @@
       if (token) window.location.replace('question.html');
     });
 
+    function setLoginMode(on) {
+      mode = on ? 'login' : 'signup';
+      document.body.classList.toggle('login-mode', on);
+      button.textContent = on ? '들어가기' : '시작하기';
+      toggle.textContent = on ? '처음이신가요 — 가입하기' : '이미 계정이 있어요 — 로그인';
+    }
+
     // 가입 ↔ 로그인 전환
     toggle.addEventListener('click', function () {
       note.textContent = '';
-      if (mode === 'signup') {
-        mode = 'login';
-        document.body.classList.add('login-mode');
-        button.textContent = '들어가기';
-        toggle.textContent = '처음이신가요 — 가입하기';
-      } else {
-        mode = 'signup';
-        document.body.classList.remove('login-mode');
-        button.textContent = '시작하기';
-        toggle.textContent = '이미 계정이 있어요 — 로그인';
-      }
+      setLoginMode(mode === 'signup');
     });
+
+    // 이미 가입된 이메일로 가입을 시도한 경우 — 로그인 모드로 안내
+    function showAlreadyRegistered(mail) {
+      setLoginMode(true);
+      document.querySelector('input[name="email"]').value = mail;
+      note.textContent = '이미 가입된 이메일이에요. 로그인해주세요.';
+    }
 
     document.getElementById('entry').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -178,10 +182,18 @@
           if (res.error) {
             var m = res.error.message || '';
             if (/already registered|already exists|User already/i.test(m)) {
-              note.textContent = '이미 가입된 이메일이에요. 아래에서 로그인해주세요.';
+              showAlreadyRegistered(mail);
             } else {
               note.textContent = '가입에 실패했어요. 잠시 후 다시 시도해주세요.';
             }
+            return;
+          }
+          // 이메일 확인이 꺼져 있을 때, 이미 가입된 이메일로 다시 가입을 시도하면
+          // (이메일 추측 방지를 위해) 에러 없이 세션 없는 응답이 와요 — 이 경우도 "이미 가입됨"으로 안내
+          var u = res.data && res.data.user;
+          var session = res.data && res.data.session;
+          if (!session && u && u.identities && u.identities.length === 0) {
+            showAlreadyRegistered(mail);
             return;
           }
           // 세션은 supabase-js가 자동 저장해요. 이름만 화면용으로 기억해둡니다.

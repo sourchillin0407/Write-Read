@@ -1,6 +1,6 @@
 // 첫 편지 보내기 — Vercel 서버리스 함수
 import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds, countRecentSends } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,10 +18,16 @@ export default async function handler(req, res) {
 
     var body = req.body || {};
     var toAnswerId = body.toAnswerId;
-    var text = body.body;
+    var text = String(body.body || '').trim();
 
-    if (!toAnswerId || !text) {
-      res.status(400).json({ error: 'missing fields' });
+    if (!toAnswerId || !text || text.length > 1000) {
+      res.status(400).json({ error: 'invalid body' });
+      return;
+    }
+
+    // 짧은 시간에 너무 많이 보내는 것 방지 (스팸 방지)
+    if (await countRecentSends(sender.id) >= 5) {
+      res.status(429).json({ error: 'too many requests' });
       return;
     }
 

@@ -20,10 +20,10 @@ export default async function handler(req, res) {
     var questionIndex = body.questionIndex;
     var answerDate = body.answerDate;
     var tone = body.tone;
-    var text = body.body;
+    var text = String(body.body || '').trim();
 
-    if (questionIndex == null || !answerDate || !tone || !text) {
-      res.status(400).json({ error: 'missing fields' });
+    if (questionIndex == null || !answerDate || !tone || !text || text.length > 1000) {
+      res.status(400).json({ error: 'invalid body' });
       return;
     }
 

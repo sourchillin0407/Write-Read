@@ -173,7 +173,7 @@
   <!-- ① 오늘의 질문 -->
   <section class="view on fade" id="view-question">
     <h1 class="question" id="question-text"></h1>
-    <textarea class="answer" id="answer" rows="1" autofocus
+    <textarea class="answer" id="answer" rows="1" autofocus maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <p class="hint">다 적었다면, 엔터.</p>
   </section>
@@ -197,7 +197,7 @@
   <section class="view" id="view-write">
     <p class="lead">이 사람에게, 첫 문장을 건네보세요.</p>
     <div class="letters" id="chosen"></div>
-    <textarea class="answer letter-body" id="letter" rows="3"
+    <textarea class="answer letter-body" id="letter" rows="3" maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <button class="home" id="send-letter">띄워 보내기</button>
     <p class="hint" id="letter-note"></p>
