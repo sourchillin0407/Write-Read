@@ -1,5 +1,5 @@
 // 받은 편지함 조회 — Vercel 서버리스 함수
-import { SUPABASE_URL, sbHeaders, getUserByEmail, getUsersByIds } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,15 +8,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    var email = req.query.email;
-    if (!email) {
-      res.status(400).json({ error: 'email required' });
-      return;
-    }
-
-    var user = await getUserByEmail(email);
+    // 출입증으로 본인 확인 — 남의 받은 편지함은 절대 못 열어요
+    var user = await getAuthedUser(req);
     if (!user) {
-      res.status(404).json({ error: 'user not found' });
+      res.status(401).json({ error: 'login required' });
       return;
     }
 

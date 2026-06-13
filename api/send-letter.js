@@ -1,6 +1,6 @@
 // 첫 편지 보내기 — Vercel 서버리스 함수
 import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getUserByEmail, getUsersByIds } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -9,19 +9,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    var body = req.body || {};
-    var email = body.email;
-    var toAnswerId = body.toAnswerId;
-    var text = body.body;
-
-    if (!email || !toAnswerId || !text) {
-      res.status(400).json({ error: 'missing fields' });
+    // 출입증으로 보내는 사람 확인
+    var sender = await getAuthedUser(req);
+    if (!sender) {
+      res.status(401).json({ error: 'login required' });
       return;
     }
 
-    var sender = await getUserByEmail(email);
-    if (!sender) {
-      res.status(404).json({ error: 'user not found' });
+    var body = req.body || {};
+    var toAnswerId = body.toAnswerId;
+    var text = body.body;
+
+    if (!toAnswerId || !text) {
+      res.status(400).json({ error: 'missing fields' });
       return;
     }
 

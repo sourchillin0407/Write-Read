@@ -65,6 +65,10 @@
       transition: border-color 0.2s ease;
     }
 
+    /* 가입 모드에서만 보이는 칸(이름) */
+    .field.signup-only { display: block; }
+    body.login-mode .field.signup-only { display: none; }
+
     .field::placeholder { color: rgba(44, 44, 44, 0.4); }
     .field:focus { border-bottom-color: var(--text); }
 
@@ -83,12 +87,28 @@
     }
 
     .enter:hover { opacity: 0.85; }
+    .enter:disabled { opacity: 0.5; cursor: default; }
+
+    .toggle {
+      margin-top: 4px;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: inherit;
+      color: rgba(44, 44, 44, 0.5);
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .toggle:hover { color: var(--text); border-bottom-color: var(--text); }
 
     .note {
       margin-top: 18px;
       font-size: 12px;
       color: rgba(44, 44, 44, 0.45);
       text-align: center;
+      min-height: 1em;
     }
   </style>
 </head>
@@ -96,61 +116,96 @@
   <p class="greeting">Write&amp;Read</p>
 
   <form id="entry">
-    <input class="field" type="text" name="nickname" placeholder="이름 혹은 별명" autocomplete="off" />
-    <input class="field" type="email" name="email" placeholder="답장 알림용 이메일 주소" autocomplete="off" />
-    <button class="enter" type="submit">시작하기</button>
+    <input class="field signup-only" type="text" name="nickname" placeholder="이름 혹은 별명" autocomplete="off" />
+    <input class="field" type="email" name="email" placeholder="이메일 주소" autocomplete="username" />
+    <input class="field" type="password" name="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" />
+    <button class="enter" type="submit" id="submit-btn">시작하기</button>
+    <button class="toggle" type="button" id="toggle">이미 계정이 있어요 — 로그인</button>
     <p class="note" id="note"></p>
   </form>
 
+  <!-- 먼저 supabase-js, 그 다음 우리 공용 헬퍼(auth.js) 순서로 불러와요 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script>
-    var SUPABASE_URL = 'https://kkjcbazvgrxqzgfbzbcs.supabase.co';
-    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtramNiYXp2Z3J4cXpnZmJ6YmNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzgyNTUsImV4cCI6MjA5Njg1NDI1NX0.C7cvDWeiYM4zCibQz7NK7zKJMZ59NLY7k4JYBfRPJIU';
+    var note = document.getElementById('note');
+    var button = document.getElementById('submit-btn');
+    var toggle = document.getElementById('toggle');
+    var mode = 'signup'; // 'signup' 또는 'login'
 
-    // 이미 들어온 적이 있으면 — 다시 묻지 않고 바로 들여보냅니다 (자동 로그인)
-    if (localStorage.getItem('wr_nickname') && localStorage.getItem('wr_email')) {
-      window.location.replace('question.html');
-    }
+    // 이미 로그인된 적이 있으면 — 바로 들여보냅니다 (자동 로그인)
+    getAccessToken().then(function (token) {
+      if (token) window.location.replace('question.html');
+    });
 
-    // 가입 — 이메일은 데이터베이스에서 중복 여부를 확인합니다.
+    // 가입 ↔ 로그인 전환
+    toggle.addEventListener('click', function () {
+      note.textContent = '';
+      if (mode === 'signup') {
+        mode = 'login';
+        document.body.classList.add('login-mode');
+        button.textContent = '들어가기';
+        toggle.textContent = '처음이신가요 — 가입하기';
+      } else {
+        mode = 'signup';
+        document.body.classList.remove('login-mode');
+        button.textContent = '시작하기';
+        toggle.textContent = '이미 계정이 있어요 — 로그인';
+      }
+    });
+
     document.getElementById('entry').addEventListener('submit', function (e) {
       e.preventDefault();
       var data = new FormData(e.target);
       var nick = (data.get('nickname') || '').trim();
       var mail = (data.get('email') || '').trim();
-      var note = document.getElementById('note');
-      var button = e.target.querySelector('.enter');
-      if (!nick || !mail) {
-        note.textContent = '빈칸을 모두 채워주세요.';
-        return;
-      }
+      var pw = (data.get('password') || '');
 
-      note.textContent = '확인하는 중…';
+      if (mode === 'signup' && !nick) { note.textContent = '이름 혹은 별명을 적어주세요.'; return; }
+      if (!mail || !pw) { note.textContent = '이메일과 비밀번호를 모두 채워주세요.'; return; }
+      if (pw.length < 6) { note.textContent = '비밀번호는 6자 이상으로 적어주세요.'; return; }
+
       button.disabled = true;
+      note.textContent = mode === 'signup' ? '계정을 만드는 중…' : '들어가는 중…';
 
-      fetch(SUPABASE_URL + '/rest/v1/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ nickname: nick, email: mail, lang: 'ko' })
-      }).then(function (res) {
-        button.disabled = false;
-        if (res.ok) {
+      if (mode === 'signup') {
+        sb.auth.signUp({
+          email: mail,
+          password: pw,
+          options: { data: { nickname: nick, lang: 'ko' } }
+        }).then(function (res) {
+          button.disabled = false;
+          if (res.error) {
+            var m = res.error.message || '';
+            if (/already registered|already exists|User already/i.test(m)) {
+              note.textContent = '이미 가입된 이메일이에요. 아래에서 로그인해주세요.';
+            } else {
+              note.textContent = '가입에 실패했어요. 잠시 후 다시 시도해주세요.';
+            }
+            return;
+          }
+          // 세션은 supabase-js가 자동 저장해요. 이름만 화면용으로 기억해둡니다.
           localStorage.setItem('wr_nickname', nick);
-          localStorage.setItem('wr_email', mail);
           window.location.href = 'question.html';
-        } else if (res.status === 409) {
-          note.textContent = '이미 사용 중인 이메일이에요.';
-        } else {
-          note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
-        }
-      }).catch(function () {
-        button.disabled = false;
-        note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
-      });
+        }).catch(function () {
+          button.disabled = false;
+          note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+        });
+      } else {
+        sb.auth.signInWithPassword({ email: mail, password: pw }).then(function (res) {
+          button.disabled = false;
+          if (res.error) {
+            note.textContent = '이메일 또는 비밀번호를 확인해주세요.';
+            return;
+          }
+          var meta = (res.data && res.data.user && res.data.user.user_metadata) || {};
+          localStorage.setItem('wr_nickname', meta.nickname || '');
+          window.location.href = 'question.html';
+        }).catch(function () {
+          button.disabled = false;
+          note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+        });
+      }
     });
   </script>
 </body>

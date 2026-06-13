@@ -124,7 +124,6 @@
   <!-- 수정 모드: 평소엔 숨겨져 있어요 -->
   <form id="edit-form">
     <input class="field" type="text" id="edit-nick" placeholder="이름 혹은 별명" autocomplete="off" />
-    <input class="field" type="email" id="edit-mail" placeholder="답장 알림용 이메일 주소" autocomplete="off" />
     <select class="field" id="edit-lang" aria-label="편지를 받을 언어"></select>
     <button class="save" type="submit">저장하기</button>
   </form>
@@ -160,6 +159,8 @@
     </a>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script>
     // 편지를 받을 언어 — 나중에 번역 API의 목표 언어가 됩니다
     var LANGS = {
@@ -180,15 +181,28 @@
       langSelect.appendChild(opt);
     });
 
+    var me = null; // 로그인한 사용자(세션 정보)
+
+    function metaNick() { return (me && me.user_metadata && me.user_metadata.nickname) || localStorage.getItem('wr_nickname') || ''; }
+    function metaLang() { return (me && me.user_metadata && me.user_metadata.lang) || localStorage.getItem('wr_lang') || 'ko'; }
+
     function render() {
-      var nick = localStorage.getItem('wr_nickname') || '이름 없는 사람';
-      var mail = localStorage.getItem('wr_email') || '';
-      var lang = localStorage.getItem('wr_lang') || 'ko';
+      var nick = metaNick() || '이름 없는 사람';
+      var mail = (me && me.email) || '';
+      var lang = metaLang();
       document.getElementById('name-line').textContent = '당신은 지금, ' + nick + '(이)라는 이름으로 머물고 있어요.';
       document.getElementById('mail-line').textContent = mail ? '답장이 오면, ' + mail + '(으)로 알려 드립니다. 그 외에는 전혀 사용되지 않아요.' : '';
       document.getElementById('lang-line').textContent = '도착하는 편지는 ' + (LANGS[lang] || '한국어') + '로 번역되어 닿아요.';
     }
-    render();
+
+    // 로그인 확인 + 내 계정 정보 불러오기
+    requireLogin().then(function (token) {
+      if (!token) return;
+      sb.auth.getUser().then(function (res) {
+        me = res && res.data ? res.data.user : null;
+        render();
+      });
+    });
 
     function setEditMode(on) {
       document.getElementById('name-line').style.display = on ? 'none' : '';
@@ -198,33 +212,40 @@
       document.getElementById('edit-form').classList.toggle('on', on);
     }
 
-    // 수정하기 — 세 줄이 입력칸으로 바뀝니다
+    // 수정하기 — 이름/언어가 입력칸으로 바뀝니다 (이메일은 로그인 아이디라 바꿀 수 없어요)
     document.getElementById('edit').addEventListener('click', function () {
-      document.getElementById('edit-nick').value = localStorage.getItem('wr_nickname') || '';
-      document.getElementById('edit-mail').value = localStorage.getItem('wr_email') || '';
-      langSelect.value = localStorage.getItem('wr_lang') || 'ko';
+      document.getElementById('edit-nick').value = metaNick();
+      langSelect.value = metaLang();
       setEditMode(true);
       document.getElementById('edit-nick').focus();
     });
 
-    // 저장하기 — 이름, 이메일, 언어를 기억하고 원래 화면으로
+    // 저장하기 — 이름/언어를 내 계정에 저장하고 원래 화면으로
     document.getElementById('edit-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var nick = document.getElementById('edit-nick').value.trim();
-      var mail = document.getElementById('edit-mail').value.trim();
-      if (!nick || !mail) return;
+      var lang = langSelect.value;
+      if (!nick) return;
+
+      // ① 내 계정 메타데이터(어느 기기에서 로그인해도 따라옴)
+      sb.auth.updateUser({ data: { nickname: nick, lang: lang } });
+      // ② users 테이블(다른 사람에게 보이는 이름) — 인증된 요청으로만
+      apiFetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nick, lang: lang })
+      });
+
       localStorage.setItem('wr_nickname', nick);
-      localStorage.setItem('wr_email', mail);
-      localStorage.setItem('wr_lang', langSelect.value);
+      localStorage.setItem('wr_lang', lang);
+      if (me) { me.user_metadata = me.user_metadata || {}; me.user_metadata.nickname = nick; me.user_metadata.lang = lang; }
       setEditMode(false);
       render();
     });
 
-    // 로그아웃 — 기억해둔 이름을 지우고 처음으로
+    // 로그아웃 — 세션을 끊고 처음으로
     document.getElementById('leave').addEventListener('click', function () {
-      localStorage.removeItem('wr_nickname');
-      localStorage.removeItem('wr_email');
-      window.location.href = 'index.html';
+      signOutAndLeave();
     });
   </script>
 </body>

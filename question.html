@@ -245,10 +245,12 @@
     </a>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script src="questions.js"></script>
   <script>
-    var EMAIL = localStorage.getItem('wr_email');
-    if (!EMAIL) { window.location.replace('index.html'); }
+    // 로그인 안 돼 있으면 첫 화면으로 돌려보내요
+    requireLogin();
 
     var QUESTION_INDEX = todayQuestionIndex();
     var ANSWER_DATE = todayDateString();
@@ -257,12 +259,12 @@
     var chosenAnswerId = null;
 
     // 답변을 서버에 보내고, 결과(매칭/대기)를 받아옵니다.
+    // apiFetch가 로그인 출입증(토큰)을 자동으로 붙여줘요.
     function submitAnswer(tone, text) {
-      return fetch('/api/submit-answer', {
+      return apiFetch('/api/submit-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: EMAIL,
           questionIndex: QUESTION_INDEX,
           answerDate: ANSWER_DATE,
           tone: tone,
@@ -318,10 +320,26 @@
             b.className = 'letter';
             b.dataset.answerId = c.id;
             b.style.setProperty('--paper', paper);
-            b.innerHTML =
-              '<p class="original">' + c.original + '</p>' +
-              (c.translated ? '<p class="translated">' + c.translated + '</p>' : '') +
-              '<p class="from">' + c.from + '</p>';
+
+            // 다른 사람이 적은 내용은 textContent로만 넣습니다.
+            // (innerHTML로 합치면 답 안에 숨긴 코드가 받는 사람 화면에서 실행될 수 있어요)
+            var pOrig = document.createElement('p');
+            pOrig.className = 'original';
+            pOrig.textContent = c.original;
+            b.appendChild(pOrig);
+
+            if (c.translated) {
+              var pTrans = document.createElement('p');
+              pTrans.className = 'translated';
+              pTrans.textContent = c.translated;
+              b.appendChild(pTrans);
+            }
+
+            var pFrom = document.createElement('p');
+            pFrom.className = 'from';
+            pFrom.textContent = c.from;
+            b.appendChild(pFrom);
+
             b.addEventListener('click', function () {
               // 고른 사람의 답을 편지 쓰는 화면 위에 그대로 옮겨둡니다
               chosenAnswerId = c.id;
@@ -360,11 +378,10 @@
       btn.disabled = true;
       note.textContent = '보내는 중…';
 
-      fetch('/api/send-letter', {
+      apiFetch('/api/send-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: EMAIL,
           toAnswerId: chosenAnswerId,
           body: letter.value.trim()
         })

@@ -170,16 +170,22 @@
     </a>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script>
-    var EMAIL = localStorage.getItem('wr_email');
-    if (!EMAIL) { window.location.replace('index.html'); }
-
     function show(id) {
       document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on'); });
       document.getElementById(id).classList.add('on');
     }
 
-    fetch('/api/inbox?email=' + encodeURIComponent(EMAIL))
+    // 로그인 확인 후, 내 받은 편지함만 불러와요 (출입증 자동 첨부)
+    requireLogin().then(function (token) {
+      if (!token) return;
+      loadInbox();
+    });
+
+    function loadInbox() {
+    apiFetch('/api/inbox')
       .then(function (res) { return res.json(); })
       .then(function (data) {
         var messages = (data && data.messages) || [];
@@ -222,10 +228,10 @@
             sendBtn.disabled = true;
             note.textContent = '보내는 중…';
 
-            fetch('/api/send-reply', {
+            apiFetch('/api/send-reply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: EMAIL, letterId: m.letterId, body: text })
+              body: JSON.stringify({ letterId: m.letterId, body: text })
             }).then(function (res) {
               sendBtn.disabled = false;
               if (res.ok) {
@@ -248,6 +254,7 @@
         show('view-list');
       })
       .catch(function () { show('view-empty'); });
+    }
   </script>
 </body>
 </html>

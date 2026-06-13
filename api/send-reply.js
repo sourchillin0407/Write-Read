@@ -1,6 +1,6 @@
 // 답장 보내기 — Vercel 서버리스 함수
 import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getUserByEmail, getUsersByIds } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -9,31 +9,37 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 출입증으로 보내는 사람 확인
+    var sender = await getAuthedUser(req);
+    if (!sender) {
+      res.status(401).json({ error: 'login required' });
+      return;
+    }
+
     var body = req.body || {};
-    var email = body.email;
     var letterId = body.letterId;
     var text = body.body;
 
-    if (!email || !letterId || !text) {
+    if (!letterId || !text) {
       res.status(400).json({ error: 'missing fields' });
       return;
     }
 
-    var sender = await getUserByEmail(email);
-    if (!sender) {
-      res.status(404).json({ error: 'user not found' });
-      return;
-    }
-
-    // 원래 편지를 보낸 사람 — 답장의 수신자
+    // 원래 편지를 보낸 사람(=답장 수신자)과, 그 편지의 수신자(=답장할 자격자) 확인
     var letterRes = await fetch(
-      SUPABASE_URL + '/rest/v1/letters?id=eq.' + letterId + '&select=from_user_id',
+      SUPABASE_URL + '/rest/v1/letters?id=eq.' + letterId + '&select=from_user_id,to_user_id',
       { headers: sbHeaders() }
     );
     var letterRows = await letterRes.json();
     var letter = letterRows[0];
     if (!letter) {
       res.status(404).json({ error: 'letter not found' });
+      return;
+    }
+
+    // 내가 받은 편지에만 답장할 수 있어요 (남의 편지에 끼어들기 차단)
+    if (letter.to_user_id !== sender.id) {
+      res.status(403).json({ error: 'not your letter' });
       return;
     }
 

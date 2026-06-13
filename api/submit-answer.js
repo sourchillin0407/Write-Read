@@ -1,6 +1,6 @@
 // 오늘의 답변 저장 + 3명 모임 판정 — Vercel 서버리스 함수
 import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getUserByEmail, getUsersByIds } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -9,21 +9,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 출입증으로 진짜 사용자 확인 (클라이언트가 보내는 이메일은 더 이상 믿지 않아요)
+    var user = await getAuthedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'login required' });
+      return;
+    }
+
     var body = req.body || {};
-    var email = body.email;
     var questionIndex = body.questionIndex;
     var answerDate = body.answerDate;
     var tone = body.tone;
     var text = body.body;
 
-    if (!email || questionIndex == null || !answerDate || !tone || !text) {
+    if (questionIndex == null || !answerDate || !tone || !text) {
       res.status(400).json({ error: 'missing fields' });
-      return;
-    }
-
-    var user = await getUserByEmail(email);
-    if (!user) {
-      res.status(404).json({ error: 'user not found' });
       return;
     }
 
