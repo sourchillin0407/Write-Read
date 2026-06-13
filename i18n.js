@@ -37,6 +37,9 @@ var I18N = {
     'q.sent.line': '편지가 떠났어요.<br/>이제 당신이 할 일은, 기다리는 일뿐이에요.',
     'q.sent.sub': '오늘의 질문은 자정에 닫혀요. 당신의 답은 그때까지 누군가에게 흘러갑니다.',
     'q.home': '처음으로',
+    'q.cand.lead': '오늘, 같은 질문에 답한 사람들이에요. 마음이 가는 답에 편지를 건네보세요.',
+    'q.reenter': '오늘 함께한 사람들에게 편지 쓰기',
+    'q.wait.hint': '아직 사람이 모이는 중이에요. 잠시 후 다시 들어오면 후보를 보여드릴게요.',
 
     // 프로필 화면
     'profile.name': '당신은 지금, {nick}(이)라는 이름으로 머물고 있어요.',
@@ -87,15 +90,17 @@ var I18N = {
 
     // 보내지 않은 편지
     'unsent.title': '보내지 않은 편지',
-    'unsent.sub': '부치지 않아도, 편지는 편지니까요.<br/>여기 적어두고 — 공개할지는 당신이 정해요.',
+    'unsent.sub': '부치지 않아도, 편지는 편지니까요.<br/>여기 적어 보관하고, 지도에 공개하면 3일 동안 전 세계 누구나 볼 수 있어요.',
     'unsent.new': '새로 적기',
     'unsent.keep': '서랍에 담아두기',
-    'unsent.placedAt': '{place}에 두었어요',
     'unsent.onMap': '지도 위에 있어요',
     'unsent.inDrawer': '서랍 속에 있어요',
     'unsent.collect': '거두기',
-    'unsent.placeOnMap': '지도에 두기',
+    'unsent.placeOnMap': '지도에 공개하기',
     'unsent.delete': '지우기',
+    'unsent.published': '지도에 공개됨 · {days}일 남음',
+    'unsent.expired': '공개가 끝나 서랍으로 돌아왔어요',
+    'unsent.placingHint': '지도에서 둘 자리를 정해주세요.',
 
     // 지도
     'map.title': '떠도는 편지들',
@@ -141,6 +146,9 @@ var I18N = {
     'q.sent.line': 'Your letter has set off.<br/>Now all that is left is to wait.',
     'q.sent.sub': "Today's question closes at midnight. Until then, your answer drifts toward someone.",
     'q.home': 'Back to start',
+    'q.cand.lead': "People who answered today's question. Offer a letter to the answer that speaks to you.",
+    'q.reenter': "Write to today's answerers",
+    'q.wait.hint': "People are still gathering. Come back in a bit and we'll show you who you can write to.",
 
     'profile.name': "You're here as {nick} right now.",
     'profile.noName': 'Someone with no name',
@@ -190,15 +198,17 @@ var I18N = {
 
     // Unsent letters
     'unsent.title': 'Unsent letters',
-    'unsent.sub': 'A letter is a letter, even unsent.<br/>Write it here — you decide whether to share it.',
+    'unsent.sub': 'A letter is a letter, even unsent.<br/>Keep it here, or place it on the map — shared with the world for 3 days.',
     'unsent.new': 'Write a new one',
     'unsent.keep': 'Tuck it in the drawer',
-    'unsent.placedAt': 'Placed at {place}',
     'unsent.onMap': 'On the map',
     'unsent.inDrawer': 'In the drawer',
     'unsent.collect': 'Take it back',
     'unsent.placeOnMap': 'Place on the map',
     'unsent.delete': 'Delete',
+    'unsent.published': 'On the map · {days} days left',
+    'unsent.expired': 'Sharing ended — back in the drawer',
+    'unsent.placingHint': 'Pick a spot on the map.',
 
     // Map
     'map.title': 'Drifting letters',
@@ -236,6 +246,20 @@ function t(key, params) {
     });
   }
   return s;
+}
+
+// 언어 코드 → 사람이 읽는 이름 (지도/후보 카드에서 "어떤 언어를 쓰는 사람"인지 표시)
+var LANG_NAMES = {
+  ko: '한국어', en: 'English', ja: '日本語', zh: '中文(简体)', zht: '中文(繁體)',
+  es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano',
+  ru: 'Русский', ar: 'العربية', hi: 'हिन्दी', bn: 'বাংলা', id: 'Bahasa Indonesia',
+  vi: 'Tiếng Việt', th: 'ไทย', tr: 'Türkçe', pl: 'Polski', nl: 'Nederlands',
+  sv: 'Svenska', uk: 'Українська', el: 'Ελληνικά', cs: 'Čeština', ro: 'Română',
+  hu: 'Magyar', fi: 'Suomi', da: 'Dansk', no: 'Norsk', he: 'עברית',
+  fa: 'فارسی', ms: 'Bahasa Melayu', fil: 'Filipino', sw: 'Kiswahili'
+};
+function langLabel(code) {
+  return (code && LANG_NAMES[code]) ? LANG_NAMES[code] : (code || '');
 }
 
 // 두 언어를 함께 보여줘요 (첫 화면처럼 방문자의 언어를 아직 모를 때).

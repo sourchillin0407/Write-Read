@@ -176,6 +176,9 @@
     <textarea class="answer" id="answer" rows="1" autofocus maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <p class="hint" id="answer-hint"></p>
+    <!-- 다시 들어왔을 때: 오늘 모인 사람들에게 편지 쓰러 가기 / 아직 대기 중 안내 -->
+    <button class="home" id="reenter-btn" type="button" style="display:none; margin-top:28px;"></button>
+    <p class="hint" id="reenter-note" style="display:none;"></p>
   </section>
 
   <!-- ② 결 고르기 -->
@@ -270,10 +273,16 @@
     paintQuestion();
     paintAnswerHint();
 
+    var candidatesCache = null;
+
     // 언어가 바뀌면(다른 기기에서 처음 로그인 등) JS로 만든 글자도 다시 칠해요
     document.addEventListener('i18n:changed', function () {
       paintQuestion();
       paintAnswerHint();
+      var rb = document.getElementById('reenter-btn');
+      var rn = document.getElementById('reenter-note');
+      if (rb.style.display !== 'none') rb.textContent = t('q.reenter');
+      if (rn.style.display !== 'none') rn.textContent = t('q.wait.hint');
     });
 
     // 로그인 안 돼 있으면 첫 화면으로 돌려보내고, 로그인돼 있으면 오늘 쓴 답을 불러와요
@@ -296,6 +305,28 @@
           answer.style.height = 'auto';
           answer.style.height = answer.scrollHeight + 'px';
           paintAnswerHint();
+          checkReentry(); // 오늘 모인 사람들 후보를 다시 보여줄 수 있는지 확인
+        })
+        .catch(function () {});
+    }
+
+    // 다시 들어왔을 때: 오늘 후보가 모였으면 "편지 쓰러 가기" 버튼, 아직이면 대기 안내
+    function checkReentry() {
+      apiFetch('/api/candidates?date=' + encodeURIComponent(ANSWER_DATE))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var btn = document.getElementById('reenter-btn');
+          var note = document.getElementById('reenter-note');
+          btn.style.display = 'none';
+          note.style.display = 'none';
+          if (data && data.status === 'matched') {
+            candidatesCache = data.candidates;
+            btn.textContent = t('q.reenter');
+            btn.style.display = '';
+          } else if (data && data.status === 'waiting') {
+            note.textContent = t('q.wait.hint');
+            note.style.display = '';
+          }
         })
         .catch(function () {});
     }
@@ -352,7 +383,53 @@
       });
     }
 
-    // ② 결 고르기 → 후보 그리기
+    // 후보(오늘 답한 사람들)를 편지지 카드로 그려요. 누르면 그 사람에게 편지 쓰기.
+    function renderCandidates(pool) {
+      pool = pool || [];
+      document.getElementById('lead').textContent = t('q.cand.lead');
+      var box = document.getElementById('letters');
+      box.innerHTML = '';
+      pool.forEach(function (c, idx) {
+        var b = document.createElement('button');
+        b.className = 'letter';
+        b.dataset.answerId = c.id;
+        b.style.setProperty('--paper', idx % 2 === 0 ? 'var(--paper-warm)' : 'var(--paper-cool)');
+
+        // 다른 사람이 적은 내용은 textContent로만 넣습니다.
+        // (innerHTML로 합치면 답 안에 숨긴 코드가 받는 사람 화면에서 실행될 수 있어요)
+        var pOrig = document.createElement('p');
+        pOrig.className = 'original';
+        pOrig.textContent = c.original;
+        b.appendChild(pOrig);
+
+        if (c.translated) {
+          var pTrans = document.createElement('p');
+          pTrans.className = 'translated';
+          pTrans.textContent = c.translated;
+          b.appendChild(pTrans);
+        }
+
+        // 닉네임 + 어떤 언어를 쓰는 사람인지 (외국인이면 감안할 수 있게)
+        var pFrom = document.createElement('p');
+        pFrom.className = 'from';
+        pFrom.textContent = c.from + (c.lang ? ' · ' + langLabel(c.lang) : '');
+        b.appendChild(pFrom);
+
+        b.addEventListener('click', function () {
+          chosenAnswerId = c.id;
+          var chosen = document.getElementById('chosen');
+          chosen.innerHTML = '';
+          var card = b.cloneNode(true);
+          card.classList.add('still');
+          chosen.appendChild(card);
+          show('view-write');
+          document.getElementById('letter').focus();
+        });
+        box.appendChild(b);
+      });
+    }
+
+    // ② 결 고르기 → 후보 그리기 (대기면 view-wait)
     document.querySelectorAll('.tone').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var tone = btn.dataset.tone;
@@ -360,60 +437,23 @@
 
         submitAnswer(tone, answerText).then(function (data) {
           btn.disabled = false;
-
+          alreadyAnswered = true;
+          existingTone = tone;
           if (!data || data.status !== 'matched') { show('view-wait'); return; }
-
-          var pool = data.candidates || [];
-          var lead = document.getElementById('lead');
-          lead.textContent = tone === 'same' ? t('q.lead.same') : t('q.lead.diff');
-
-          var paper = tone === 'same' ? 'var(--paper-warm)' : 'var(--paper-cool)';
-          var box = document.getElementById('letters');
-          box.innerHTML = '';
-          pool.forEach(function (c) {
-            var b = document.createElement('button');
-            b.className = 'letter';
-            b.dataset.answerId = c.id;
-            b.style.setProperty('--paper', paper);
-
-            // 다른 사람이 적은 내용은 textContent로만 넣습니다.
-            // (innerHTML로 합치면 답 안에 숨긴 코드가 받는 사람 화면에서 실행될 수 있어요)
-            var pOrig = document.createElement('p');
-            pOrig.className = 'original';
-            pOrig.textContent = c.original;
-            b.appendChild(pOrig);
-
-            if (c.translated) {
-              var pTrans = document.createElement('p');
-              pTrans.className = 'translated';
-              pTrans.textContent = c.translated;
-              b.appendChild(pTrans);
-            }
-
-            var pFrom = document.createElement('p');
-            pFrom.className = 'from';
-            pFrom.textContent = c.from;
-            b.appendChild(pFrom);
-
-            b.addEventListener('click', function () {
-              // 고른 사람의 답을 편지 쓰는 화면 위에 그대로 옮겨둡니다
-              chosenAnswerId = c.id;
-              var chosen = document.getElementById('chosen');
-              chosen.innerHTML = '';
-              var card = b.cloneNode(true);
-              card.classList.add('still');
-              chosen.appendChild(card);
-              show('view-write');
-              document.getElementById('letter').focus();
-            });
-            box.appendChild(b);
-          });
+          renderCandidates(data.candidates);
           show('view-candidates');
         }).catch(function () {
           btn.disabled = false;
           show('view-wait');
         });
       });
+    });
+
+    // 다시 들어와서 "오늘 함께한 사람들에게 편지 쓰기"를 누르면 후보 화면으로
+    document.getElementById('reenter-btn').addEventListener('click', function () {
+      if (!candidatesCache) return;
+      renderCandidates(candidatesCache);
+      show('view-candidates');
     });
 
     // 편지 칸도 쓰는 만큼 늘어나도록

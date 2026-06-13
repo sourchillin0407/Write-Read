@@ -172,17 +172,18 @@
   </nav>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script src="i18n.js"></script>
   <script>
-    // ── 보내지 않은 편지 중 "공개"로 둔 것들 — 지금은 내 브라우저(localStorage)에만 저장돼요.
-    //    나중에 Supabase가 붙으면 전세계의 공개 편지가 여기에 함께 표시됩니다.
+    // ── 지도에 공개된 편지들은 Supabase에 저장돼 전 세계가 함께 봐요 (공개 후 3일).
 
-    var letters = JSON.parse(localStorage.getItem('wr_unsent') || '[]');
-    function persist() { localStorage.setItem('wr_unsent', JSON.stringify(letters)); }
+    // 로그인 확인 (지도에 공개하려면 로그인 필요)
+    requireLogin();
 
     function escapeHtml(s) {
       var d = document.createElement('div');
-      d.textContent = s;
+      d.textContent = (s == null) ? '' : s;
       return d.innerHTML;
     }
 
@@ -193,40 +194,71 @@
       maxZoom: 18
     }).addTo(map);
 
+    // ── 전 세계 공개 편지를 불러와 표시 (3일 이내). 버블은 작게(겹침 방지), 팝업에 닉네임·언어.
     var markers = [];
-    function drawMarkers() {
-      markers.forEach(function (m) { map.removeLayer(m); });
-      markers = [];
-      letters.forEach(function (l) {
-        if (l.public && l.spot) {
-          var m = L.circleMarker(l.spot, {
-            radius: 7, color: '#6b7c3a', weight: 1.5,
-            fillColor: '#f7ece2', fillOpacity: 0.95
-          }).addTo(map).bindPopup(escapeHtml(l.text) + '<br/><small>' + t('map.myLetter') + '</small>');
-          markers.push(m);
-        }
-      });
+    function loadWall() {
+      apiFetch('/api/wall')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          markers.forEach(function (m) { map.removeLayer(m); });
+          markers = [];
+          (data.letters || []).forEach(function (l) {
+            if (typeof l.lat !== 'number' || typeof l.lng !== 'number') return;
+            var who = escapeHtml(l.nickname || '익명');
+            var lang = l.lang ? ' · ' + escapeHtml(langLabel(l.lang)) : '';
+            var m = L.circleMarker([l.lat, l.lng], {
+              radius: 3.5, color: '#6b7c3a', weight: 1.5,
+              fillColor: '#f7ece2', fillOpacity: 0.95
+            }).addTo(map).bindPopup(escapeHtml(l.body) + '<br/><small>' + who + lang + '</small>');
+            markers.push(m);
+          });
+        })
+        .catch(function () {});
     }
 
-    // ── 지도에 두기: 주소를 적어서 자리를 정합니다
-    var placingIndex = null;
-    function startPlacing(i) {
-      placingIndex = i;
+    // ── 지도에 공개: 자리를 정하면 서버에 올려요
+    var placing = null; // { idx, text }
+    function startPlacing(p) {
+      placing = p;
       document.getElementById('placing-msg').textContent = t('map.placingMsg');
       document.getElementById('place-input').value = '';
       document.getElementById('placing-note').classList.add('on');
       document.getElementById('place-input').focus();
     }
 
-    function placeAt(spot, placeName) {
-      if (placingIndex === null) return;
-      letters[placingIndex].public = true;
-      letters[placingIndex].spot = spot;
-      letters[placingIndex].place = placeName || '';
-      placingIndex = null;
-      document.getElementById('placing-note').classList.remove('on');
-      map.setView(spot, 13);
-      persist(); drawMarkers();
+    function placeAt(spot) {
+      if (!placing) return;
+      var text = placing.text, idx = placing.idx;
+      document.getElementById('placing-msg').textContent = t('map.searching');
+      apiFetch('/api/place-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text, lat: spot[0], lng: spot[1] })
+      }).then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          placing = null;
+          document.getElementById('placing-note').classList.remove('on');
+          if (data && data.id != null) markPublished(idx, data.id); // 서랍에 '공개됨' 표시
+          map.setView(spot, 11);
+          loadWall();
+        })
+        .catch(function () {
+          document.getElementById('placing-msg').textContent = t('map.notFound');
+        });
+    }
+
+    // unsent.html과 공유하는 localStorage에 공개 상태를 기록 (서랍 표시용)
+    function markPublished(idx, wallId) {
+      if (idx == null) return;
+      try {
+        var arr = JSON.parse(localStorage.getItem('wr_unsent') || '[]');
+        if (arr[idx]) {
+          arr[idx].published = true;
+          arr[idx].publishedAt = Date.now();
+          arr[idx].wallId = wallId;
+          localStorage.setItem('wr_unsent', JSON.stringify(arr));
+        }
+      } catch (e) {}
     }
 
     // 사이트 언어에 맞춰 장소 이름을 돌려주도록 — Photon은 en/de/fr/it 지원, 그 외엔 현지어(default)
@@ -285,7 +317,7 @@
         b.textContent = o.label;
         b.addEventListener('click', function () {
           results.innerHTML = '';
-          placeAt(o.spot, o.label);
+          placeAt(o.spot);
         });
         results.appendChild(b);
       });
@@ -335,7 +367,7 @@
     // "지금 내가 있는 자리에 두기"
     document.getElementById('place-here').addEventListener('click', function () {
       locate(function (spot) {
-        placeAt(spot, '');
+        placeAt(spot);
       }, function () {
         document.getElementById('placing-msg').textContent = t('map.noLocPlace');
       });
@@ -350,17 +382,19 @@
       });
     });
 
-    drawMarkers();
+    loadWall();
 
-    // unsent.html에서 "지도에 두기"를 누르고 넘어온 경우 — 바로 자리 정하기를 시작합니다
-    var pending = localStorage.getItem('wr_placing_index');
-    if (pending !== null) {
-      localStorage.removeItem('wr_placing_index');
-      var idx = parseInt(pending, 10);
-      if (!isNaN(idx) && letters[idx]) {
-        startPlacing(idx);
-        document.getElementById('placing-note').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    // unsent.html에서 "지도에 공개하기"를 누르고 넘어온 경우 — 바로 자리 정하기를 시작합니다
+    var pendingRaw = localStorage.getItem('wr_placing');
+    if (pendingRaw) {
+      localStorage.removeItem('wr_placing');
+      try {
+        var p = JSON.parse(pendingRaw);
+        if (p && p.text) {
+          startPlacing(p);
+          document.getElementById('placing-note').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch (e) {}
     }
   </script>
 </body>

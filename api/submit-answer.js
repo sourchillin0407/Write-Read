@@ -1,6 +1,6 @@
-// 오늘의 답변 저장 + 3명 모임 판정 — Vercel 서버리스 함수
-import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds } from '../lib/supabase.js';
+// 오늘의 답변 저장 + 펜팔 후보 선택 — Vercel 서버리스 함수
+// 답을 '소비'하지 않아요(재사용). 후보 선택은 lib의 selectCandidates가 담당.
+import { SUPABASE_URL, sbHeaders, getAuthedUser, selectCandidates } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     var answerDate = body.answerDate;
     var tone = body.tone;
     var text = String(body.body || '').trim();
-    // editOnly: 이미 오늘 답한 사람이 "내용만 고칠 때". 재매칭·알림메일을 건너뜁니다.
+    // editOnly: 이미 오늘 답한 사람이 "내용만 고칠 때". 후보 조회를 건너뜁니다.
     var editOnly = body.editOnly === true;
 
     if (questionIndex == null || !answerDate || !tone || !text || text.length > 1000) {
@@ -47,59 +47,19 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 수정 모드면 여기서 끝 — 다시 매칭을 돌리거나 알림 메일을 보내지 않아요
+    // 수정 모드면 여기서 끝
     if (editOnly) {
       res.status(200).json({ status: 'saved' });
       return;
     }
 
-    // 같은 질문, 같은 결, 아직 매칭되지 않은, 나 외의 답변들
-    var poolRes = await fetch(
-      SUPABASE_URL + '/rest/v1/answers' +
-        '?answer_date=eq.' + answerDate +
-        '&question_index=eq.' + questionIndex +
-        '&tone=eq.' + tone +
-        '&matched=eq.false' +
-        '&user_id=neq.' + user.id +
-        '&select=id,body,user_id&order=created_at.asc',
-      { headers: sbHeaders() }
-    );
-    var pool = await poolRes.json();
-
-    if (pool.length < 3) {
+    // 오늘 답한 사람들 중 펜팔 후보 3명 (답을 소비하지 않으므로 다음 사람에게도 또 뜰 수 있어요)
+    var candidates = await selectCandidates(user.id, answerDate, tone);
+    if (!candidates) {
+      // 아직 3명이 안 모였어요. 나중에 다시 들어오면 후보를 보여줘요.
       res.status(200).json({ status: 'waiting' });
       return;
     }
-
-    var chosen = pool.slice(0, 3);
-
-    // 선택된 세 답변을 매칭 완료로 표시
-    for (var i = 0; i < chosen.length; i++) {
-      await fetch(SUPABASE_URL + '/rest/v1/answers?id=eq.' + chosen[i].id, {
-        method: 'PATCH',
-        headers: sbHeaders(),
-        body: JSON.stringify({ matched: true })
-      });
-    }
-
-    // 매칭된 작성자들에게 "세 사람이 모였어요" 이메일 (best-effort)
-    var userIds = chosen.map(function (c) { return c.user_id; });
-    var users = await getUsersByIds(userIds);
-    var usersById = {};
-    users.forEach(function (u) { usersById[u.id] = u; });
-
-    for (var j = 0; j < users.length; j++) {
-      await sendEmail(
-        users[j].email,
-        'Write-Read — 세 사람이 모였어요',
-        '<p>' + (users[j].nickname || '당신') + '님, 오늘의 질문에 세 사람이 모였어요.<br/>누군가 당신의 답을 읽고, 편지를 보내올지도 몰라요. Write-Read에서 받은 편지함을 확인해보세요.</p>'
-      );
-    }
-
-    var candidates = chosen.map(function (c) {
-      var u = usersById[c.user_id];
-      return { id: c.id, original: c.body, from: (u && u.nickname) ? u.nickname : '익명' };
-    });
 
     res.status(200).json({ status: 'matched', candidates: candidates });
   } catch (e) {
