@@ -1,6 +1,6 @@
 // 오늘 내가 쓴 답 조회 — Vercel 서버리스 함수
 // 질문 화면을 다시 열어도, 오늘 이미 쓴 답을 그대로 보여주기 위해 사용해요.
-import { SUPABASE_URL, sbHeaders, getAuthedUser } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, hasSentLetterToday } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -32,7 +32,10 @@ export default async function handler(req, res) {
     var rows = await r.json();
     var answer = (rows && rows[0]) ? rows[0] : null;
 
-    res.status(200).json({ answer: answer });
+    // 오늘 이미 편지를 보냈으면, 질문 화면에서 안내하고 후보 고르기 흐름을 막아요
+    var sentToday = await hasSentLetterToday(user.id);
+
+    res.status(200).json({ answer: answer, sentToday: sentToday });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }

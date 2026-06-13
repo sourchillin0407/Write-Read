@@ -92,6 +92,8 @@
 
     /* ③ 후보 — 편지지 카드 */
     .lead { font-size: clamp(16px, 3vw, 20px); text-align: center; margin-bottom: 40px; }
+    #view-candidates .lead { margin-bottom: 14px; }
+    .cand-note { font-size: 13px; text-align: center; color: rgba(44, 44, 44, 0.5); margin-bottom: 36px; }
 
     .letters { display: flex; flex-direction: column; gap: 20px; width: 100%; }
 
@@ -176,9 +178,6 @@
     <textarea class="answer" id="answer" rows="1" autofocus maxlength="1000"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <p class="hint" id="answer-hint"></p>
-    <!-- 다시 들어왔을 때: 오늘 모인 사람들에게 편지 쓰러 가기 / 아직 대기 중 안내 -->
-    <button class="home" id="reenter-btn" type="button" style="display:none; margin-top:28px;"></button>
-    <p class="hint" id="reenter-note" style="display:none;"></p>
   </section>
 
   <!-- ② 결 고르기 -->
@@ -193,6 +192,7 @@
   <!-- ③ 후보 세 사람 -->
   <section class="view" id="view-candidates">
     <p class="lead" id="lead"></p>
+    <p class="cand-note" data-i18n="q.cand.oneADay"></p>
     <div class="letters" id="letters"></div>
   </section>
 
@@ -258,31 +258,28 @@
 
     var chosenAnswerId = null;
 
-    // 오늘 이미 답했는지 여부 — 답했으면 새로 답하지 않고 "수정"만 해요
+    // 오늘 이미 답했는지 / 오늘 편지를 보냈는지
     var alreadyAnswered = false;
     var existingTone = null;
+    var sentToday = false;
 
     // 질문 본문과 입력칸 아래 안내문을 현재 언어로 칠해요 (언어가 바뀌면 다시 호출)
     function paintQuestion() {
       document.getElementById('question-text').textContent = todayQuestion();
     }
     function paintAnswerHint() {
-      document.getElementById('answer-hint').innerHTML =
-        alreadyAnswered ? t('q.hint.answered') : t('q.hint');
+      var h = document.getElementById('answer-hint');
+      if (sentToday) h.innerHTML = t('q.hint.sentToday');
+      else if (alreadyAnswered) h.innerHTML = t('q.hint.answered');
+      else h.innerHTML = t('q.hint');
     }
     paintQuestion();
     paintAnswerHint();
-
-    var candidatesCache = null;
 
     // 언어가 바뀌면(다른 기기에서 처음 로그인 등) JS로 만든 글자도 다시 칠해요
     document.addEventListener('i18n:changed', function () {
       paintQuestion();
       paintAnswerHint();
-      var rb = document.getElementById('reenter-btn');
-      var rn = document.getElementById('reenter-note');
-      if (rb.style.display !== 'none') rb.textContent = t('q.reenter');
-      if (rn.style.display !== 'none') rn.textContent = t('q.wait.hint');
     });
 
     // 로그인 안 돼 있으면 첫 화면으로 돌려보내고, 로그인돼 있으면 오늘 쓴 답을 불러와요
@@ -291,42 +288,22 @@
       loadTodayAnswer();
     });
 
-    // 오늘 이미 쓴 답이 있으면 그대로 채워넣어요 (자정까지 유지)
+    // 오늘 이미 쓴 답이 있으면 그대로 채워넣어요 (자정까지 유지). sentToday면 흐름을 막아요.
     function loadTodayAnswer() {
       apiFetch('/api/my-answer?date=' + encodeURIComponent(ANSWER_DATE))
         .then(function (res) { return res.json(); })
         .then(function (data) {
+          sentToday = !!(data && data.sentToday);
           var a = data && data.answer;
-          if (!a) return;
-          alreadyAnswered = true;
-          existingTone = a.tone;
-          answerText = a.body;
-          answer.value = a.body;
-          answer.style.height = 'auto';
-          answer.style.height = answer.scrollHeight + 'px';
-          paintAnswerHint();
-          checkReentry(); // 오늘 모인 사람들 후보를 다시 보여줄 수 있는지 확인
-        })
-        .catch(function () {});
-    }
-
-    // 다시 들어왔을 때: 오늘 후보가 모였으면 "편지 쓰러 가기" 버튼, 아직이면 대기 안내
-    function checkReentry() {
-      apiFetch('/api/candidates?date=' + encodeURIComponent(ANSWER_DATE))
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          var btn = document.getElementById('reenter-btn');
-          var note = document.getElementById('reenter-note');
-          btn.style.display = 'none';
-          note.style.display = 'none';
-          if (data && data.status === 'matched') {
-            candidatesCache = data.candidates;
-            btn.textContent = t('q.reenter');
-            btn.style.display = '';
-          } else if (data && data.status === 'waiting') {
-            note.textContent = t('q.wait.hint');
-            note.style.display = '';
+          if (a) {
+            alreadyAnswered = true;
+            existingTone = a.tone;
+            answerText = a.body;
+            answer.value = a.body;
+            answer.style.height = 'auto';
+            answer.style.height = answer.scrollHeight + 'px';
           }
+          paintAnswerHint();
         })
         .catch(function () {});
     }
@@ -366,8 +343,9 @@
         e.preventDefault();
         if (!answer.value.trim()) return;
         answerText = answer.value.trim();
-        // 이미 오늘 답했으면 — 새로 답하지 않고 내용만 고쳐 저장해요
-        if (alreadyAnswered) { saveEdit(); return; }
+        // 오늘 이미 편지를 보냈으면 — 내용만 고쳐 저장 (하루 한 명 규칙)
+        if (sentToday) { saveEdit(); return; }
+        // 처음이든 다시 들어왔든 동일하게: 결 선택 → 후보군
         show('view-tone');
       }
     });
@@ -449,12 +427,6 @@
       });
     });
 
-    // 다시 들어와서 "오늘 함께한 사람들에게 편지 쓰기"를 누르면 후보 화면으로
-    document.getElementById('reenter-btn').addEventListener('click', function () {
-      if (!candidatesCache) return;
-      renderCandidates(candidatesCache);
-      show('view-candidates');
-    });
 
     // 편지 칸도 쓰는 만큼 늘어나도록
     var letterBox = document.getElementById('letter');
@@ -484,6 +456,8 @@
         btn.disabled = false;
         if (res.ok) {
           show('view-sent');
+        } else if (res.status === 409) {
+          note.textContent = t('q.onePerDay'); // 오늘 이미 한 통 보냄
         } else {
           note.textContent = t('q.sendFail');
         }

@@ -1,6 +1,6 @@
 // 첫 편지 보내기 — Vercel 서버리스 함수
 import { sendEmail } from '../lib/resend.js';
-import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds, countRecentSends } from '../lib/supabase.js';
+import { SUPABASE_URL, sbHeaders, getAuthedUser, getUsersByIds, countRecentSends, hasSentLetterToday } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -28,6 +28,12 @@ export default async function handler(req, res) {
     // 짧은 시간에 너무 많이 보내는 것 방지 (스팸 방지)
     if (await countRecentSends(sender.id) >= 5) {
       res.status(429).json({ error: 'too many requests' });
+      return;
+    }
+
+    // 하루에 첫 편지는 한 명에게만 — 오늘 이미 보냈으면 막아요
+    if (await hasSentLetterToday(sender.id)) {
+      res.status(409).json({ error: 'one letter per day' });
       return;
     }
 
