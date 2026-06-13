@@ -249,18 +249,45 @@
   <script src="auth.js"></script>
   <script src="questions.js"></script>
   <script>
-    // 로그인 안 돼 있으면 첫 화면으로 돌려보내요
-    requireLogin();
-
     var QUESTION_INDEX = todayQuestionIndex();
     var ANSWER_DATE = todayDateString();
     document.getElementById('question-text').textContent = todayQuestion();
 
     var chosenAnswerId = null;
 
+    // 오늘 이미 답했는지 여부 — 답했으면 새로 답하지 않고 "수정"만 해요
+    var alreadyAnswered = false;
+    var existingTone = null;
+
+    // 로그인 안 돼 있으면 첫 화면으로 돌려보내고, 로그인돼 있으면 오늘 쓴 답을 불러와요
+    requireLogin().then(function (token) {
+      if (!token) return;
+      loadTodayAnswer();
+    });
+
+    // 오늘 이미 쓴 답이 있으면 그대로 채워넣어요 (자정까지 유지)
+    function loadTodayAnswer() {
+      apiFetch('/api/my-answer?date=' + encodeURIComponent(ANSWER_DATE))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var a = data && data.answer;
+          if (!a) return;
+          alreadyAnswered = true;
+          existingTone = a.tone;
+          answerText = a.body;
+          answer.value = a.body;
+          answer.style.height = 'auto';
+          answer.style.height = answer.scrollHeight + 'px';
+          document.querySelector('#view-question .hint').textContent =
+            '오늘은 이미 답했어요. 고치고 싶으면 내용을 바꾸고 엔터.';
+        })
+        .catch(function () {});
+    }
+
     // 답변을 서버에 보내고, 결과(매칭/대기)를 받아옵니다.
     // apiFetch가 로그인 출입증(토큰)을 자동으로 붙여줘요.
-    function submitAnswer(tone, text) {
+    // editOnly=true면 내용만 고치는 거라 재매칭·알림메일이 일어나지 않아요.
+    function submitAnswer(tone, text, editOnly) {
       return apiFetch('/api/submit-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,7 +295,8 @@
           questionIndex: QUESTION_INDEX,
           answerDate: ANSWER_DATE,
           tone: tone,
-          body: text
+          body: text,
+          editOnly: editOnly === true
         })
       }).then(function (res) { return res.json(); });
     }
@@ -291,9 +319,24 @@
         e.preventDefault();
         if (!answer.value.trim()) return;
         answerText = answer.value.trim();
+        // 이미 오늘 답했으면 — 새로 답하지 않고 내용만 고쳐 저장해요
+        if (alreadyAnswered) { saveEdit(); return; }
         show('view-tone');
       }
     });
+
+    // 오늘 답을 고쳐 저장 (결은 처음 고른 그대로, 재매칭 없음)
+    function saveEdit() {
+      var hint = document.querySelector('#view-question .hint');
+      hint.textContent = '저장하는 중…';
+      submitAnswer(existingTone, answerText, true).then(function (data) {
+        hint.textContent = (data && data.status === 'saved')
+          ? '고쳐서 저장했어요.'
+          : '저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+      }).catch(function () {
+        hint.textContent = '저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+      });
+    }
 
     // ② 결 고르기 → 후보 그리기
     document.querySelectorAll('.tone').forEach(function (btn) {

@@ -21,6 +21,8 @@ export default async function handler(req, res) {
     var answerDate = body.answerDate;
     var tone = body.tone;
     var text = String(body.body || '').trim();
+    // editOnly: 이미 오늘 답한 사람이 "내용만 고칠 때". 재매칭·알림메일을 건너뜁니다.
+    var editOnly = body.editOnly === true;
 
     if (questionIndex == null || !answerDate || !tone || !text || text.length > 1000) {
       res.status(400).json({ error: 'invalid body' });
@@ -42,6 +44,12 @@ export default async function handler(req, res) {
     if (!upsertRes.ok) {
       var errText = await upsertRes.text();
       res.status(502).json({ error: errText });
+      return;
+    }
+
+    // 수정 모드면 여기서 끝 — 다시 매칭을 돌리거나 알림 메일을 보내지 않아요
+    if (editOnly) {
+      res.status(200).json({ status: 'saved' });
       return;
     }
 
