@@ -172,7 +172,7 @@
 
   <!-- ① 오늘의 질문 -->
   <section class="view on fade" id="view-question">
-    <h1 class="question">당신에게 고향은 어떤 곳인가요.</h1>
+    <h1 class="question" id="question-text"></h1>
     <textarea class="answer" id="answer" rows="1" autofocus
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <p class="hint">다 적었다면, 엔터.</p>
@@ -200,6 +200,7 @@
     <textarea class="answer letter-body" id="letter" rows="3"
       placeholder="" autocomplete="off" spellcheck="false"></textarea>
     <button class="home" id="send-letter">띄워 보내기</button>
+    <p class="hint" id="letter-note"></p>
   </section>
 
   <!-- 사람이 아직 안 모였을 때 -->
@@ -237,11 +238,30 @@
     </a>
   </nav>
 
+  <script src="questions.js"></script>
   <script>
-    // ── 아직 실제 매칭은 연결되지 않았어요.
-    //    여기서 Supabase + 임베딩으로 진짜 후보를 찾아오게 됩니다.
-    function fetchCandidates(tone) {
-      return [];
+    var EMAIL = localStorage.getItem('wr_email');
+    if (!EMAIL) { window.location.replace('index.html'); }
+
+    var QUESTION_INDEX = todayQuestionIndex();
+    var ANSWER_DATE = todayDateString();
+    document.getElementById('question-text').textContent = todayQuestion();
+
+    var chosenAnswerId = null;
+
+    // 답변을 서버에 보내고, 결과(매칭/대기)를 받아옵니다.
+    function submitAnswer(tone, text) {
+      return fetch('/api/submit-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: EMAIL,
+          questionIndex: QUESTION_INDEX,
+          answerDate: ANSWER_DATE,
+          tone: tone,
+          body: text
+        })
+      }).then(function (res) { return res.json(); });
     }
 
     function show(id) {
@@ -251,6 +271,7 @@
     }
 
     // ① 답변 — 엔터로 다음 단계
+    var answerText = '';
     var answer = document.getElementById('answer');
     answer.addEventListener('input', function () {
       answer.style.height = 'auto';
@@ -260,7 +281,7 @@
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         if (!answer.value.trim()) return;
-        localStorage.setItem('wr_answer', answer.value.trim());
+        answerText = answer.value.trim();
         show('view-tone');
       }
     });
@@ -269,40 +290,49 @@
     document.querySelectorAll('.tone').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var tone = btn.dataset.tone;
+        btn.disabled = true;
 
-        // 후보가 세 사람 미만이면 — 기다림 화면으로
-        var pool = fetchCandidates(tone);
-        if (pool.length < 3) { show('view-wait'); return; }
+        submitAnswer(tone, answerText).then(function (data) {
+          btn.disabled = false;
 
-        var lead = document.getElementById('lead');
-        lead.textContent = tone === 'same'
-          ? '당신과 비슷한 온도로 답한 세 사람입니다.'
-          : '당신과 전혀 다른 곳에서 답한 세 사람입니다.';
+          if (!data || data.status !== 'matched') { show('view-wait'); return; }
 
-        var paper = tone === 'same' ? 'var(--paper-warm)' : 'var(--paper-cool)';
-        var box = document.getElementById('letters');
-        box.innerHTML = '';
-        pool.forEach(function (c) {
-          var b = document.createElement('button');
-          b.className = 'letter';
-          b.style.setProperty('--paper', paper);
-          b.innerHTML =
-            '<p class="original">' + c.original + '</p>' +
-            (c.translated ? '<p class="translated">' + c.translated + '</p>' : '') +
-            '<p class="from">' + c.from + '</p>';
-          b.addEventListener('click', function () {
-            // 고른 사람의 답을 편지 쓰는 화면 위에 그대로 옮겨둡니다
-            var chosen = document.getElementById('chosen');
-            chosen.innerHTML = '';
-            var card = b.cloneNode(true);
-            card.classList.add('still');
-            chosen.appendChild(card);
-            show('view-write');
-            document.getElementById('letter').focus();
+          var pool = data.candidates || [];
+          var lead = document.getElementById('lead');
+          lead.textContent = tone === 'same'
+            ? '당신과 비슷한 온도로 답한 세 사람입니다.'
+            : '당신과 전혀 다른 곳에서 답한 세 사람입니다.';
+
+          var paper = tone === 'same' ? 'var(--paper-warm)' : 'var(--paper-cool)';
+          var box = document.getElementById('letters');
+          box.innerHTML = '';
+          pool.forEach(function (c) {
+            var b = document.createElement('button');
+            b.className = 'letter';
+            b.dataset.answerId = c.id;
+            b.style.setProperty('--paper', paper);
+            b.innerHTML =
+              '<p class="original">' + c.original + '</p>' +
+              (c.translated ? '<p class="translated">' + c.translated + '</p>' : '') +
+              '<p class="from">' + c.from + '</p>';
+            b.addEventListener('click', function () {
+              // 고른 사람의 답을 편지 쓰는 화면 위에 그대로 옮겨둡니다
+              chosenAnswerId = c.id;
+              var chosen = document.getElementById('chosen');
+              chosen.innerHTML = '';
+              var card = b.cloneNode(true);
+              card.classList.add('still');
+              chosen.appendChild(card);
+              show('view-write');
+              document.getElementById('letter').focus();
+            });
+            box.appendChild(b);
           });
-          box.appendChild(b);
+          show('view-candidates');
+        }).catch(function () {
+          btn.disabled = false;
+          show('view-wait');
         });
-        show('view-candidates');
       });
     });
 
@@ -316,9 +346,32 @@
     // ④ 편지 보내기
     document.getElementById('send-letter').addEventListener('click', function () {
       var letter = document.getElementById('letter');
-      if (!letter.value.trim()) return;
-      localStorage.setItem('wr_letter', letter.value.trim());
-      show('view-sent');
+      var note = document.getElementById('letter-note');
+      var btn = document.getElementById('send-letter');
+      if (!letter.value.trim() || !chosenAnswerId) return;
+
+      btn.disabled = true;
+      note.textContent = '보내는 중…';
+
+      fetch('/api/send-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: EMAIL,
+          toAnswerId: chosenAnswerId,
+          body: letter.value.trim()
+        })
+      }).then(function (res) {
+        btn.disabled = false;
+        if (res.ok) {
+          show('view-sent');
+        } else {
+          note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
+        }
+      }).catch(function () {
+        btn.disabled = false;
+        note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+      });
     });
 
     // 처음으로 — 오늘의 질문 화면을 새로 엽니다

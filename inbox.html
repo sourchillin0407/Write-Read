@@ -44,7 +44,7 @@
     .letters { display: flex; flex-direction: column; gap: 20px; width: 100%; }
 
     .letter {
-      background: var(--paper-warm);
+      background: var(--paper);
       border: none;
       border-radius: 4px;
       padding: 28px 28px 22px;
@@ -53,17 +53,68 @@
       color: var(--text);
       text-align: left;
       box-shadow: 0 2px 10px rgba(44, 44, 44, 0.08);
-      transform: rotate(-0.6deg);
     }
-    button.letter { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    button.letter:hover {
-      transform: rotate(0deg) translateY(-3px);
-      box-shadow: 0 6px 18px rgba(44, 44, 44, 0.12);
-    }
+    .letter:nth-child(odd)  { transform: rotate(-0.6deg); }
+    .letter:nth-child(even) { transform: rotate(0.5deg); }
 
     .letter .original { font-size: 16px; line-height: 1.5; white-space: pre-line; }
     .letter .translated { font-size: 13px; line-height: 1.5; margin-top: 12px; color: rgba(44, 44, 44, 0.6); white-space: pre-line; }
     .letter .from { font-size: 12px; margin-top: 16px; color: rgba(44, 44, 44, 0.45); }
+
+    /* 답장 토글 */
+    .reply-toggle {
+      margin-top: 16px;
+      background: none;
+      border: none;
+      border-top: none; border-left: none; border-right: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: inherit;
+      color: rgba(44, 44, 44, 0.45);
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+    .reply-toggle:hover { color: var(--text); border-bottom-color: var(--text); }
+
+    .reply-form { display: none; flex-direction: column; gap: 12px; margin-top: 18px; }
+    .reply-form.on { display: flex; animation: fade 0.4s ease; }
+
+    .reply-text {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(44, 44, 44, 0.35);
+      resize: none;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.5;
+      letter-spacing: inherit;
+      color: var(--text);
+      caret-color: var(--text);
+      outline: none;
+      padding: 4px 2px 8px;
+      transition: border-color 0.2s ease;
+    }
+    .reply-text::placeholder { color: rgba(44, 44, 44, 0.4); }
+    .reply-text:focus { border-bottom-color: var(--text); }
+
+    .reply-send {
+      align-self: flex-start;
+      background: var(--point);
+      color: #f4f6e0;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 24px;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .reply-send:hover { opacity: 0.85; }
+
+    .reply-note { font-size: 12px; color: rgba(44, 44, 44, 0.45); }
 
     /* 하단 독 */
     .dock {
@@ -81,9 +132,15 @@
 <body>
 
   <!-- ① 편지 목록 (아직 도착한 편지가 없을 때) -->
-  <section class="view on" id="view-list">
+  <section class="view on" id="view-empty">
     <p class="lead">아직, 도착한 편지가 없어요.</p>
     <p class="sub">누군가에게 답이 닿으면, 여기로 편지가 와요.</p>
+  </section>
+
+  <!-- ② 편지 목록 (도착한 편지가 있을 때) -->
+  <section class="view" id="view-list">
+    <p class="lead">도착한 편지들이에요.</p>
+    <div class="letters" id="letters"></div>
   </section>
 
   <!-- 하단 독: 오늘의 질문 / 보내지 않은 편지 / 프로필 -->
@@ -107,8 +164,83 @@
   </nav>
 
   <script>
-    // 아직 받은 편지함은 실제 데이터와 연결되지 않았어요.
-    // Supabase가 붙으면, 도착한 편지를 여기서 읽고 답장할 수 있게 됩니다.
+    var EMAIL = localStorage.getItem('wr_email');
+    if (!EMAIL) { window.location.replace('index.html'); }
+
+    function show(id) {
+      document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('on'); });
+      document.getElementById(id).classList.add('on');
+    }
+
+    fetch('/api/inbox?email=' + encodeURIComponent(EMAIL))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var messages = (data && data.messages) || [];
+        if (!messages.length) { show('view-empty'); return; }
+
+        var box = document.getElementById('letters');
+        box.innerHTML = '';
+        messages.forEach(function (m, idx) {
+          var card = document.createElement('div');
+          card.className = 'letter';
+          card.style.setProperty('--paper', idx % 2 === 0 ? 'var(--paper-warm)' : 'var(--paper-cool)');
+          card.innerHTML =
+            '<p class="original"></p>' +
+            '<p class="from"></p>' +
+            '<button class="reply-toggle" type="button">답장하기</button>' +
+            '<form class="reply-form">' +
+              '<textarea class="reply-text" rows="2" placeholder="답장을 적어보세요" autocomplete="off" spellcheck="false"></textarea>' +
+              '<button class="reply-send" type="submit">보내기</button>' +
+              '<p class="reply-note"></p>' +
+            '</form>';
+
+          card.querySelector('.original').textContent = m.body;
+          card.querySelector('.from').textContent = m.from + '님이 보낸 ' + (m.kind === 'reply' ? '답장' : '편지');
+
+          var toggle = card.querySelector('.reply-toggle');
+          var form = card.querySelector('.reply-form');
+          toggle.addEventListener('click', function () {
+            form.classList.toggle('on');
+            if (form.classList.contains('on')) form.querySelector('.reply-text').focus();
+          });
+
+          form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var textarea = form.querySelector('.reply-text');
+            var note = form.querySelector('.reply-note');
+            var sendBtn = form.querySelector('.reply-send');
+            var text = textarea.value.trim();
+            if (!text) return;
+
+            sendBtn.disabled = true;
+            note.textContent = '보내는 중…';
+
+            fetch('/api/send-reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: EMAIL, letterId: m.letterId, body: text })
+            }).then(function (res) {
+              sendBtn.disabled = false;
+              if (res.ok) {
+                note.textContent = '답장을 보냈어요.';
+                textarea.value = '';
+                textarea.disabled = true;
+                sendBtn.disabled = true;
+              } else {
+                note.textContent = '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
+              }
+            }).catch(function () {
+              sendBtn.disabled = false;
+              note.textContent = '연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+            });
+          });
+
+          box.appendChild(card);
+        });
+
+        show('view-list');
+      })
+      .catch(function () { show('view-empty'); });
   </script>
 </body>
 </html>
