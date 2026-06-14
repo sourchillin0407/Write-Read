@@ -70,8 +70,8 @@ export default async function handler(req, res) {
     if (recipients[0]) {
       await sendEmail(
         recipients[0].email,
-        'Write-Read — 새 편지가 도착했어요',
-        '<p>' + (recipients[0].nickname || '당신') + '님, 누군가 당신에게 편지를 보냈어요.<br/>Write-Read 받은 편지함에서 확인해보세요.</p>'
+        'Dear — 새 편지가 도착했어요',
+        '<p>' + (recipients[0].nickname || '당신') + '님, 누군가 당신에게 편지를 보냈어요.<br/>Dear 받은 편지함에서 확인해보세요.</p>'
       );
     }
 
