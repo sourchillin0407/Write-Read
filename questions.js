@@ -132,8 +132,9 @@ var QUESTIONS_EN = [
 var QUESTIONS_START = '2026-06-13'; // 이 날이 0번 질문(#1) → 다음 날(06-14)이 #2
 
 function todayQuestionIndex() {
-  var start = new Date(QUESTIONS_START + 'T00:00:00+09:00');
-  var startUTC = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+  // 시작일을 'KST 달력 날짜' 그대로 UTC 기준점으로 (오늘 계산과 기준을 맞춰요)
+  var p = QUESTIONS_START.split('-');
+  var startUTC = Date.UTC(+p[0], +p[1] - 1, +p[2]);
   var kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   var nowUTC = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate());
   var days = Math.floor((nowUTC - startUTC) / 86400000);
