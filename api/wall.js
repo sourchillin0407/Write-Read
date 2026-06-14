@@ -13,11 +13,28 @@ export default async function handler(req, res) {
     var r = await fetch(
       SUPABASE_URL + '/rest/v1/public_letters' +
         '?created_at=gte.' + since +
-        '&select=nickname,lang,body,lat,lng,created_at&order=created_at.desc&limit=500',
+        '&select=id,nickname,lang,body,place,lat,lng,created_at&order=created_at.desc&limit=500',
       { headers: sbHeaders() }
     );
     var letters = await r.json();
-    res.status(200).json({ letters: Array.isArray(letters) ? letters : [] });
+    if (!Array.isArray(letters)) letters = [];
+
+    // 편지별 댓글 수 세기 (letter_comments 테이블이 아직 없으면 그냥 0)
+    if (letters.length) {
+      var ids = letters.map(function (l) { return l.id; });
+      var cRes = await fetch(
+        SUPABASE_URL + '/rest/v1/letter_comments?public_letter_id=in.(' + ids.join(',') + ')&select=public_letter_id',
+        { headers: sbHeaders() }
+      );
+      var comments = await cRes.json();
+      var counts = {};
+      if (Array.isArray(comments)) {
+        comments.forEach(function (c) { counts[c.public_letter_id] = (counts[c.public_letter_id] || 0) + 1; });
+      }
+      letters.forEach(function (l) { l.commentCount = counts[l.id] || 0; });
+    }
+
+    res.status(200).json({ letters: letters });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }

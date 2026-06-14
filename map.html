@@ -113,6 +113,38 @@
 
     .leaflet-popup-content { font-family: 'Pretendard', 'Noto Sans', sans-serif; letter-spacing: 0.03em; line-height: 1.5; }
 
+    /* 팝업 내용 */
+    .pop-body { font-size: 14px; line-height: 1.5; white-space: pre-line; }
+    .pop-meta { font-size: 12px; color: rgba(44, 44, 44, 0.6); margin-top: 8px; }
+    .pop-sub  { font-size: 12px; color: rgba(44, 44, 44, 0.5); margin-top: 6px; }
+    .pop-date { font-size: 11px; color: rgba(44, 44, 44, 0.4); margin-top: 2px; }
+
+    /* 댓글 토글 + 펼쳐지는 영역 */
+    .pop-cmt-toggle {
+      margin-top: 12px; background: none; border: none; padding: 0; cursor: pointer;
+      font-family: inherit; font-size: 12px; color: var(--point);
+      border-bottom: 1px solid transparent; transition: border-color 0.2s ease;
+    }
+    .pop-cmt-toggle:hover { border-bottom-color: var(--point); }
+    .pop-cmts { margin-top: 10px; max-height: 180px; overflow-y: auto; }
+    .cmt { padding: 8px 0; border-top: 1px solid rgba(44, 44, 44, 0.1); }
+    .cmt-body { font-size: 13px; line-height: 1.45; white-space: pre-line; }
+    .cmt-who { font-size: 11px; color: rgba(44, 44, 44, 0.45); margin-top: 4px; }
+    .cmt-none { font-size: 12px; color: rgba(44, 44, 44, 0.45); padding: 6px 0; }
+    .cmt-form { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .cmt-input {
+      width: 100%; box-sizing: border-box; resize: none;
+      border: none; border-bottom: 1px solid rgba(44, 44, 44, 0.3); background: transparent;
+      font-family: inherit; font-size: 13px; line-height: 1.4; color: var(--text);
+      outline: none; padding: 4px 2px;
+    }
+    .cmt-send {
+      align-self: flex-end; background: var(--point); color: #f4f6e0;
+      border: none; border-radius: 999px; padding: 5px 16px;
+      font-family: inherit; font-size: 12px; cursor: pointer; transition: opacity 0.2s ease;
+    }
+    .cmt-send:hover { opacity: 0.85; }
+
     /* 하단 독 */
     .dock {
       position: fixed;
@@ -187,6 +219,147 @@
       return d.innerHTML;
     }
 
+    // 올린 날짜·시간 (보는 사람 기준 YYYY.M.D HH:MM)
+    function fmtDateTime(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate() +
+        ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    // 지도 편지 팝업 — 본문 / 주소 / 닉네임·언어 / 날짜 + 댓글 토글(누르면 펼쳐짐)
+    function buildPopup(l) {
+      var wrap = document.createElement('div');
+
+      var b = document.createElement('p');
+      b.className = 'pop-body';
+      b.textContent = l.body || '';
+      wrap.appendChild(b);
+
+      if (l.place) {
+        var pl = document.createElement('p');
+        pl.className = 'pop-meta';
+        pl.textContent = '📍 ' + l.place;
+        wrap.appendChild(pl);
+      }
+
+      var sub = document.createElement('p');
+      sub.className = 'pop-sub';
+      sub.textContent = (l.nickname || '익명') + (l.lang ? ' · ' + langLabel(l.lang) : '');
+      wrap.appendChild(sub);
+
+      if (l.created_at) {
+        var dt = document.createElement('p');
+        dt.className = 'pop-date';
+        dt.textContent = fmtDateTime(l.created_at);
+        wrap.appendChild(dt);
+      }
+
+      // 💬 댓글 N개 (없으면 '댓글 달기') — 누르면 아래로 펼쳐져요
+      var n = l.commentCount || 0;
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'pop-cmt-toggle';
+      toggle.textContent = '💬 ' + (n > 0 ? t('cmt.count', { n: n }) : t('cmt.add'));
+      wrap.appendChild(toggle);
+
+      var box = document.createElement('div');
+      box.className = 'pop-cmts';
+      box.style.display = 'none';
+      wrap.appendChild(box);
+
+      var loaded = false;
+      toggle.addEventListener('click', function () {
+        if (box.style.display === 'none') {
+          box.style.display = 'block';
+          if (!loaded) { loaded = true; loadComments(l.id, box); }
+        } else {
+          box.style.display = 'none';
+        }
+      });
+
+      return wrap;
+    }
+
+    // 댓글 목록 + 입력칸을 box 안에 그려요
+    function loadComments(letterId, box) {
+      box.innerHTML = '';
+      var loading = document.createElement('p');
+      loading.className = 'cmt-none';
+      loading.textContent = t('cmt.loading');
+      box.appendChild(loading);
+
+      apiFetch('/api/comments?letterId=' + encodeURIComponent(letterId))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          box.innerHTML = '';
+          var list = data.comments || [];
+          if (!list.length) {
+            var none = document.createElement('p');
+            none.className = 'cmt-none';
+            none.textContent = t('cmt.none');
+            box.appendChild(none);
+          } else {
+            list.forEach(function (c) {
+              var item = document.createElement('div');
+              item.className = 'cmt';
+              var cb = document.createElement('p');
+              cb.className = 'cmt-body';
+              cb.textContent = c.body; // 댓글 내용 — textContent로만 안전하게
+              item.appendChild(cb);
+              var cw = document.createElement('p');
+              cw.className = 'cmt-who';
+              cw.textContent = (c.nickname || '익명') + (c.lang ? ' · ' + langLabel(c.lang) : '');
+              item.appendChild(cw);
+              box.appendChild(item);
+            });
+          }
+
+          // 댓글 입력
+          var form = document.createElement('form');
+          form.className = 'cmt-form';
+          var ta = document.createElement('textarea');
+          ta.className = 'cmt-input';
+          ta.rows = 2; ta.maxLength = 1000;
+          ta.placeholder = t('cmt.placeholder');
+          ta.autocomplete = 'off';
+          var send = document.createElement('button');
+          send.type = 'submit';
+          send.className = 'cmt-send';
+          send.textContent = t('cmt.send');
+          form.appendChild(ta);
+          form.appendChild(send);
+          box.appendChild(form);
+
+          form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var txt = ta.value.trim();
+            if (!txt) return;
+            send.disabled = true;
+            apiFetch('/api/comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ letterId: letterId, body: txt })
+            }).then(function (res) {
+              if (res.ok) {
+                loadComments(letterId, box); // 새 댓글 반영 (팝업은 그대로 열려 있어요)
+              } else {
+                send.disabled = false;
+              }
+            }).catch(function () { send.disabled = false; });
+          });
+        })
+        .catch(function () {
+          box.innerHTML = '';
+          var none = document.createElement('p');
+          none.className = 'cmt-none';
+          none.textContent = t('cmt.none');
+          box.appendChild(none);
+        });
+    }
+
     // ── 지도 (밝고 차분한 타일 — 사이트 톤에 맞춰서)
     var map = L.map('map', { worldCopyJump: true }).setView([24, 10], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -204,12 +377,10 @@
           markers = [];
           (data.letters || []).forEach(function (l) {
             if (typeof l.lat !== 'number' || typeof l.lng !== 'number') return;
-            var who = escapeHtml(l.nickname || '익명');
-            var lang = l.lang ? ' · ' + escapeHtml(langLabel(l.lang)) : '';
             var m = L.circleMarker([l.lat, l.lng], {
               radius: 3.5, color: '#6b7c3a', weight: 1.5,
               fillColor: '#f7ece2', fillOpacity: 0.95
-            }).addTo(map).bindPopup(escapeHtml(l.body) + '<br/><small>' + who + lang + '</small>');
+            }).addTo(map).bindPopup(buildPopup(l), { maxWidth: 300, minWidth: 200 });
             markers.push(m);
           });
         })
@@ -226,14 +397,14 @@
       document.getElementById('place-input').focus();
     }
 
-    function placeAt(spot) {
+    function placeAt(spot, place) {
       if (!placing) return;
       var text = placing.text, idx = placing.idx;
       document.getElementById('placing-msg').textContent = t('map.searching');
       apiFetch('/api/place-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: text, lat: spot[0], lng: spot[1] })
+        body: JSON.stringify({ body: text, place: place || '', lat: spot[0], lng: spot[1] })
       }).then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
           placing = null;
@@ -317,7 +488,7 @@
         b.textContent = o.label;
         b.addEventListener('click', function () {
           results.innerHTML = '';
-          placeAt(o.spot);
+          placeAt(o.spot, o.label); // 고른 주소도 함께 저장
         });
         results.appendChild(b);
       });
@@ -367,7 +538,7 @@
     // "지금 내가 있는 자리에 두기"
     document.getElementById('place-here').addEventListener('click', function () {
       locate(function (spot) {
-        placeAt(spot);
+        placeAt(spot, ''); // 내 위치는 주소 없이
       }, function () {
         document.getElementById('placing-msg').textContent = t('map.noLocPlace');
       });

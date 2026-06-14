@@ -119,7 +119,15 @@ var I18N = {
     'map.confirmOne': '여기인가요? 맞다면 눌러주세요.',
     'map.notFound': '그곳을 찾지 못했어요. 조금 다르게 적어볼까요?',
     'map.noLocPlace': '위치를 가져올 수 없었어요. 주소를 적어서 자리를 정해주세요.',
-    'map.noLocAlert': '위치를 가져올 수 없었어요. 브라우저의 위치 권한을 확인해주세요.'
+    'map.noLocAlert': '위치를 가져올 수 없었어요. 브라우저의 위치 권한을 확인해주세요.',
+
+    // 지도 편지 댓글(커뮤니티)
+    'cmt.count': '댓글 {n}개',
+    'cmt.add': '댓글 달기',
+    'cmt.loading': '불러오는 중…',
+    'cmt.none': '아직 댓글이 없어요. 먼저 말 걸어보세요.',
+    'cmt.placeholder': '댓글을 남겨보세요',
+    'cmt.send': '남기기'
   },
 
   en: {
@@ -230,7 +238,15 @@ var I18N = {
     'map.confirmOne': 'Is this it? Tap to confirm.',
     'map.notFound': "Couldn't find that place. Try writing it a little differently?",
     'map.noLocPlace': "Couldn't get your location. Enter an address to set the spot.",
-    'map.noLocAlert': "Couldn't get your location. Check your browser's location permission."
+    'map.noLocAlert': "Couldn't get your location. Check your browser's location permission.",
+
+    // Comments on map letters (community)
+    'cmt.count': '{n} comments',
+    'cmt.add': 'Comment',
+    'cmt.loading': 'Loading…',
+    'cmt.none': 'No comments yet. Be the first to say hi.',
+    'cmt.placeholder': 'Leave a comment',
+    'cmt.send': 'Post'
   }
 };
 
