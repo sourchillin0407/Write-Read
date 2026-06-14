@@ -437,6 +437,21 @@
       return ({ en: 'en', de: 'de', fr: 'fr', it: 'it' })[uiLang()] || 'default';
     }
 
+    // 좌표 → 주소 (GPS로 둘 때 주소를 자동으로 채워요). 실패하면 빈 문자열.
+    function reverseGeocode(spot, cb) {
+      fetch('https://photon.komoot.io/reverse?lang=' + geoLang() + '&lat=' + spot[0] + '&lon=' + spot[1])
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var f = j.features && j.features[0];
+          if (!f) { cb(''); return; }
+          var p = f.properties || {};
+          var label = [p.name, p.district, p.city || p.county, p.state, p.country]
+            .filter(Boolean).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+          cb(label || '');
+        })
+        .catch(function () { cb(''); });
+    }
+
     // 같은 라벨의 후보가 여러 개 나오면 하나만 남겨요 (예: 역·구·동네가 같은 이름)
     function dedupe(list) {
       var seen = {};
@@ -538,7 +553,8 @@
     // "지금 내가 있는 자리에 두기"
     document.getElementById('place-here').addEventListener('click', function () {
       locate(function (spot) {
-        placeAt(spot, ''); // 내 위치는 주소 없이
+        document.getElementById('placing-msg').textContent = t('map.searching');
+        reverseGeocode(spot, function (label) { placeAt(spot, label); }); // 좌표 → 주소 자동
       }, function () {
         document.getElementById('placing-msg').textContent = t('map.noLocPlace');
       });
