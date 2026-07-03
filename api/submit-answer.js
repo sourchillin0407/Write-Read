@@ -54,14 +54,14 @@ export default async function handler(req, res) {
     }
 
     // 오늘 답한 사람들 중 펜팔 후보 3명 (답을 소비하지 않으므로 다음 사람에게도 또 뜰 수 있어요)
-    var candidates = await selectCandidates(user.id, answerDate, tone);
-    if (!candidates) {
-      // 아직 3명이 안 모였어요. 나중에 다시 들어오면 후보를 보여줘요.
-      res.status(200).json({ status: 'waiting' });
+    var result = await selectCandidates(user.id, answerDate, tone);
+    if (!result || result.status !== 'matched') {
+      // 아직 3명이 안 모였어요 — 지금까지 모인 인원 수를 함께 알려줘요.
+      res.status(200).json({ status: 'waiting', count: result ? result.count : 0 });
       return;
     }
 
-    res.status(200).json({ status: 'matched', candidates: candidates });
+    res.status(200).json({ status: 'matched', candidates: result.candidates });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }

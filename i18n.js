@@ -37,6 +37,7 @@ var I18N = {
     'q.connFail': '연결할 수 없어요. 잠시 후 다시 시도해주세요.',
     'q.wait.line': '아직, 사람이 모이는 중이에요.',
     'q.wait.sub': '당신의 답은 잘 놓아두었어요.<br/>잠시 후 다시 들어오면, 만날 사람들을 보여드릴게요.',
+    'q.wait.count': '지금까지 {n}명이 함께 답을 놓아두었어요. 세 사람이 모이면 서로에게 닿아요.',
     'q.sent.line': '편지가 떠났어요.<br/>이제 당신이 할 일은, 기다리는 일뿐이에요.',
     'q.sent.sub': '오늘의 질문은 자정에 닫혀요. 당신의 답은 그때까지 누군가에게 흘러갑니다.',
     'q.home': '처음으로',
@@ -71,6 +72,13 @@ var I18N = {
     'auth.loginFail': '이메일 또는 비밀번호를 확인해주세요.',
     'auth.connFail': '연결할 수 없어요. 잠시 후 다시 시도해주세요.',
     'auth.langNote': '가입 후 프로필에서 다른 언어로 바꿀 수 있어요.',
+
+    // 첫 방문 안내 (한 번만 보여요)
+    'intro.1': '매일 자정, 새 질문이 하나 도착해요.',
+    'intro.2': '답을 남기면 — 오늘 답한 사람들의 답을 보여드려요.',
+    'intro.3': '마음이 가는 답에 편지를 건네보세요. 하루에 한 통이에요.',
+    'intro.4': '답장이 오가면, 그렇게 펜팔이 시작돼요.',
+    'intro.ok': '좋아요, 시작할게요',
 
     // 받은 편지함
     'inbox.empty': '아직, 도착한 편지가 없어요.',
@@ -157,6 +165,7 @@ var I18N = {
     'q.connFail': "Couldn't connect. Please try again in a moment.",
     'q.wait.line': 'People are still gathering.',
     'q.wait.sub': "Your answer is safely set aside.<br/>Come back in a little while and we'll show you who to meet.",
+    'q.wait.count': "So far, {n} people have left their answers. When three gather, you'll reach each other.",
     'q.sent.line': 'Your letter has set off.<br/>Now all that is left is to wait.',
     'q.sent.sub': "Today's question closes at midnight. Until then, your answer drifts toward someone.",
     'q.home': 'Back to start',
@@ -190,6 +199,13 @@ var I18N = {
     'auth.loginFail': 'Please check your email or password.',
     'auth.connFail': "Couldn't connect. Please try again in a moment.",
     'auth.langNote': 'You can switch languages in your profile after signing up.',
+
+    // First-visit intro (shown once)
+    'intro.1': 'A new question arrives every midnight.',
+    'intro.2': "Leave your answer — we'll show you what today's answerers wrote.",
+    'intro.3': 'Offer a letter to the answer that speaks to you. One a day.',
+    'intro.4': 'When replies begin to flow, a pen pal begins.',
+    'intro.ok': "Okay, let's begin",
 
     // Inbox
     'inbox.empty': 'No letters have arrived yet.',

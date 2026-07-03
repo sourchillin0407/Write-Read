@@ -152,6 +152,31 @@
     }
     .home:hover { opacity: 0.85; }
 
+    /* 첫 방문 안내 — 한 번만 보여요 */
+    #intro {
+      position: fixed;
+      inset: 0;
+      background: rgba(44, 44, 44, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 2000;
+    }
+    #intro.on { display: flex; animation: fade 0.4s ease; }
+    .intro-card {
+      background: var(--paper-warm);
+      border-radius: 6px;
+      padding: 40px 34px 34px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(44, 44, 44, 0.2);
+    }
+    .intro-title { font-size: 24px; font-weight: 600; margin-bottom: 22px; }
+    .intro-line { font-size: 14px; line-height: 1.7; margin-top: 10px; color: var(--text); }
+    #intro-ok { margin-top: 32px; }
+
     /* 하단 독 — 받은 편지함 / 프로필 */
     .dock {
       position: fixed;
@@ -210,8 +235,21 @@
   <section class="view" id="view-wait">
     <p class="sent-line" data-i18n="q.wait.line"></p>
     <p class="sent-sub" data-i18n="q.wait.sub"></p>
+    <p class="sent-sub" id="wait-count"></p>
     <button class="home" id="go-home-wait" data-i18n="q.home"></button>
   </section>
+
+  <!-- 첫 방문 안내 (한 번만) -->
+  <div id="intro">
+    <div class="intro-card">
+      <p class="intro-title">Dear,</p>
+      <p class="intro-line" data-i18n="intro.1"></p>
+      <p class="intro-line" data-i18n="intro.2"></p>
+      <p class="intro-line" data-i18n="intro.3"></p>
+      <p class="intro-line" data-i18n="intro.4"></p>
+      <button class="home" id="intro-ok" data-i18n="intro.ok"></button>
+    </div>
+  </div>
 
   <!-- ⑤ 편지가 떠났어요 -->
   <section class="view" id="view-sent">
@@ -417,11 +455,18 @@
           btn.disabled = false;
           alreadyAnswered = true;
           existingTone = tone;
-          if (!data || data.status !== 'matched') { show('view-wait'); return; }
+          if (!data || data.status !== 'matched') {
+            // 아직 3명이 안 모임 — 지금까지 모인 인원을 보여줘요
+            document.getElementById('wait-count').textContent =
+              (data && data.count > 0) ? t('q.wait.count', { n: data.count }) : '';
+            show('view-wait');
+            return;
+          }
           renderCandidates(data.candidates);
           show('view-candidates');
         }).catch(function () {
           btn.disabled = false;
+          document.getElementById('wait-count').textContent = '';
           show('view-wait');
         });
       });
@@ -471,6 +516,16 @@
     function goHome() { window.location.reload(); }
     document.getElementById('go-home').addEventListener('click', goHome);
     document.getElementById('go-home-wait').addEventListener('click', goHome);
+
+    // 첫 방문이면 사용법을 한 번 보여줘요 (닫으면 다시 안 떠요)
+    if (!localStorage.getItem('wr_intro_seen')) {
+      document.getElementById('intro').classList.add('on');
+    }
+    document.getElementById('intro-ok').addEventListener('click', function () {
+      localStorage.setItem('wr_intro_seen', '1');
+      document.getElementById('intro').classList.remove('on');
+      answer.focus();
+    });
   </script>
 </body>
 </html>

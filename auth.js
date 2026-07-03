@@ -42,3 +42,57 @@ async function signOutAndLeave() {
   localStorage.removeItem('wr_nickname');
   window.location.href = 'index.html';
 }
+
+// ── 하단 독(공통 꾸미기): 아이콘 아래 작은 라벨 + 받은 편지함 '답장할 차례' 알림 점
+// 모든 페이지가 auth.js를 쓰므로 여기 한 곳에서 처리해요.
+
+// 아이콘 아래 라벨 — 이미 번역된 aria-label 글자를 그대로 보여줘요
+function paintDockLabels() {
+  var dock = document.querySelector('.dock');
+  if (!dock) return;
+  dock.querySelectorAll('a').forEach(function (a) {
+    var span = a.querySelector('.dock-label');
+    if (!span) {
+      span = document.createElement('span');
+      span.className = 'dock-label';
+      a.appendChild(span);
+    }
+    span.textContent = a.getAttribute('aria-label') || '';
+  });
+}
+
+// 받은 편지함에 '내가 답장할 차례'인 대화가 있으면 편지함 아이콘에 점을 켜요
+async function checkInboxBadge() {
+  var link = document.querySelector('.dock a[href="inbox.html"]');
+  if (!link || link.querySelector('.dock-dot')) return;
+  try {
+    var token = await getAccessToken();
+    if (!token) return;
+    var res = await apiFetch('/api/inbox');
+    var data = await res.json();
+    var myTurn = ((data && data.threads) || []).some(function (th) { return th.canReply; });
+    if (myTurn) {
+      var dot = document.createElement('span');
+      dot.className = 'dock-dot';
+      link.appendChild(dot);
+    }
+  } catch (e) {}
+}
+
+(function initDock() {
+  function run() {
+    if (!document.querySelector('.dock')) return;
+    // 라벨·점 스타일 (페이지 CSS를 건드리지 않고 여기서 주입)
+    var css = document.createElement('style');
+    css.textContent =
+      '.dock a { flex-direction: column; align-items: center; gap: 4px; position: relative; text-decoration: none; }' +
+      '.dock .dock-label { font-size: 10px; letter-spacing: 0.05em; color: var(--point); opacity: 0.85; }' +
+      '.dock .dock-dot { position: absolute; top: -3px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: #c0574f; }';
+    document.head.appendChild(css);
+    paintDockLabels();
+    document.addEventListener('i18n:changed', paintDockLabels); // 언어 바뀌면 라벨도 갈아끼워요
+    checkInboxBadge();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();

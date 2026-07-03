@@ -33,13 +33,13 @@ export default async function handler(req, res) {
       return;
     }
 
-    var candidates = await selectCandidates(user.id, date, rows[0].tone);
-    if (!candidates) {
-      res.status(200).json({ status: 'waiting' });
+    var result = await selectCandidates(user.id, date, rows[0].tone);
+    if (!result || result.status !== 'matched') {
+      res.status(200).json({ status: 'waiting', count: result ? result.count : 0 });
       return;
     }
 
-    res.status(200).json({ status: 'matched', candidates: candidates });
+    res.status(200).json({ status: 'matched', candidates: result.candidates });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
